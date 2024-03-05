@@ -33,6 +33,30 @@ if True:
 
     RESNET_DIR = os.path.join(HOME_DIR, "Documents", "video2motion", "resnet")
 
+    MEDIAPIPE_QUEUE_DATA_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "queue_data", "mediapipe"
+    )
+
+    RESNET_QUEUE_DATA_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "queue_data", "resnet"
+    )
+
+    ANIM_EULER_QUEUE_DATA_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "queue_data", "anim_euler"
+    )
+
+    MEDIAPIPE_JOINED_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "joined", "mediapipe"
+    )
+
+    RESNET_JOINED_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "joined", "resnet"
+    )
+
+    ANIM_EULER_JOINED_DIR = os.path.join(
+        HOME_DIR, "Documents", "video2motion", "joined", "anim_euler"
+    )
+
 # else:
 
 #     SCREENSHOT_DIR = os.path.join("D:\\", "video2motion", "screenshots")
