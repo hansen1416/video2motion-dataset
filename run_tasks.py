@@ -17,6 +17,8 @@ from constants import (
 )
 from ResnetTask import ResnetTask
 from ResnetBuildTask import ResnetBuildTask
+from UploadScreenshotTask import UploadScreenshotTask
+from UploadMediapipeTask import UploadMediapipeTask
 
 
 # Load the environment variables from the .env file
@@ -40,7 +42,7 @@ if __name__ == "__main__":
             )
             for q in queue_files
         ]
-    else:
+    elif False:
         processes = [
             ResnetBuildTask(
                 queue_file_path=q,
@@ -49,6 +51,20 @@ if __name__ == "__main__":
                 resnet_queue_path=resnet_queue_path,
                 anim_euler_path=ANIM_EULER_LOCAL_DIR,
                 # size_limit=10,
+            )
+            for q in queue_files
+        ]
+    elif False:
+        processes = [
+            UploadScreenshotTask(
+                queue_file_path=q,
+            )
+            for q in queue_files
+        ]
+    else:
+        processes = [
+            UploadMediapipeTask(
+                queue_file_path=q,
             )
             for q in queue_files
         ]
