@@ -19,6 +19,7 @@ from ResnetTask import ResnetTask
 from ResnetBuildTask import ResnetBuildTask
 from UploadScreenshotTask import UploadScreenshotTask
 from UploadMediapipeTask import UploadMediapipeTask
+from UploadResnetTask import UploadResnetTask
 
 
 # Load the environment variables from the .env file
@@ -61,9 +62,16 @@ if __name__ == "__main__":
             )
             for q in queue_files
         ]
-    else:
+    elif False:
         processes = [
             UploadMediapipeTask(
+                queue_file_path=q,
+            )
+            for q in queue_files
+        ]
+    elif True:
+        processes = [
+            UploadResnetTask(
                 queue_file_path=q,
             )
             for q in queue_files
