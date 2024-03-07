@@ -2,8 +2,13 @@ import json
 import os
 from multiprocessing import Process
 
+from pytorch_openpose.src.body import Body
+
 
 def openpose_predict():
+
+    print(Body)
+
     pass
 
 
