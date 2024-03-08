@@ -13,6 +13,7 @@ from oss2.credentials import EnvironmentVariableCredentialsProvider
 
 from pytorch_openpose.src.body import Body
 from utils import load_env_from_file
+from constants import SCREENSHOT_DIR
 
 # from pytorch_openpose.src import util
 
@@ -107,17 +108,26 @@ class OpenposeTask(Process):
                 print(f"queue {queue_num}, {object_name} already exists in the bucket")
                 continue
 
-            # get oss screenshot image path, then save it to local tmp file
-            screenshot_path = f"screenshot/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}.jpg"
-            file_stream = self.bucket.get_object(screenshot_path)
+            # # get oss screenshot image path, then save it to local tmp file
+            # screenshot_path = f"screenshot/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}.jpg"
+            # file_stream = self.bucket.get_object(screenshot_path)
 
-            tmp_filename = f"temp{queue_num}.jpg"
+            # tmp_filename = f"temp{queue_num}.jpg"
 
-            with open(tmp_filename, "wb") as f:
-                shutil.copyfileobj(file_stream, f)
+            # with open(tmp_filename, "wb") as f:
+            #     shutil.copyfileobj(file_stream, f)
+
+            screenshot_path = os.path.join(
+                SCREENSHOT_DIR,
+                humanoid_name,
+                animation_name,
+                str(elevation),
+                str(azimuth),
+                f"{n_frame}.jpg",
+            )
 
             # prediction
-            joints_position = openpose_predict(tmp_filename)
+            joints_position = openpose_predict(screenshot_path)
 
             if joints_position is None:
 
@@ -135,7 +145,7 @@ class OpenposeTask(Process):
             result = self.bucket.put_object(object_name, joints_position_bytes)
 
             # unlink `tmp_filename`
-            os.unlink(tmp_filename)
+            # os.unlink(tmp_filename)
 
             if int(result.status) != 200:
                 # output the local file path to local log
