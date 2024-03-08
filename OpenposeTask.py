@@ -3,6 +3,7 @@ import os
 import copy
 from multiprocessing import Process
 
+import shutil
 import numpy as np
 import cv2
 import oss2
@@ -11,8 +12,12 @@ from oss2.credentials import EnvironmentVariableCredentialsProvider
 # import matplotlib.pyplot as plt
 
 from pytorch_openpose.src.body import Body
+from utils import load_env_from_file
 
 # from pytorch_openpose.src import util
+
+
+load_env_from_file()
 
 
 def openpose_predict(file_path: str):
@@ -28,6 +33,9 @@ def openpose_predict(file_path: str):
     oriImg = cv2.imread(file_path)  # B,G,R order
     candidate, subset = body_estimation(oriImg)
 
+    if candidate is None or candidate.shape[0] == 0:
+        return None
+
     # the first two items of each row is the x, y coordinates of the body joint
     joints_position = copy.deepcopy(candidate[:, :2])
 
@@ -40,7 +48,7 @@ def openpose_predict(file_path: str):
 
     joints_position = np.array(joints_position)
 
-    print(joints_position.shape)
+    # print(joints_position.shape)
 
     return joints_position
 
@@ -53,7 +61,7 @@ def openpose_predict(file_path: str):
     # plt.show()
 
 
-class ResnetTask(Process):
+class OpenposeTask(Process):
 
     # override the constructor
     def __init__(self, queue_file_path, size_limit=None):
@@ -79,6 +87,10 @@ class ResnetTask(Process):
             .replace("queue", "")
         )
 
+        if self.size_limit:
+            # for testing, only get 100
+            queue_data = queue_data[: self.size_limit]
+
         humanoid_name = "dors.glb"
 
         for i, (animation_name, elevation, azimuth, n_frame) in enumerate(queue_data):
@@ -90,12 +102,29 @@ class ResnetTask(Process):
                 print(f"queue {queue_num}, {object_name} already exists in the bucket")
                 continue
 
-            # todo get oss screenshot image path, then pass it to `openpose_predict`
+            # get oss screenshot image path, then save it to local tmp file
+            screenshot_path = f"screenshot/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}.jpg"
+            file_stream = self.bucket.get_object(screenshot_path)
 
-            # todo convert the result from `openpose_predict` to bytes
+            with open("temp.jpg", "wb") as f:
+                shutil.copyfileobj(file_stream, f)
+            # prediction
+            joints_position = openpose_predict("temp.jpg")
+
+            if joints_position is None:
+
+                exmpty_object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/empty.txt"
+
+                result = self.bucket.put_object(exmpty_object_name, "")
+                continue
+
+            # convert the result from `openpose_predict` to bytes
+            joints_position_bytes = joints_position.tobytes()
 
             # upload bytes to oss
-            result = self.bucket.put_object_from_file(object_name, local_file)
+            result = self.bucket.put_object_from_file(
+                object_name, joints_position_bytes
+            )
 
             if int(result.status) != 200:
                 # output the local file path to local log

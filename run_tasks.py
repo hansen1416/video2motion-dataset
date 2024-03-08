@@ -15,10 +15,6 @@ from UploadMediapipeTask import UploadMediapipeTask
 from UploadResnetTask import UploadResnetTask
 
 
-# Load the environment variables from the .env file
-# load_dotenv()
-
-
 if __name__ == "__main__":
 
     mediapipe_landmarks_path = os.path.join(MEDIAPIPE_DIR, "landmarks")
