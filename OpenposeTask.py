@@ -3,17 +3,18 @@ import os
 import copy
 from multiprocessing import Process
 
-import shutil
+# import shutil
 import numpy as np
 import cv2
-import oss2
-from oss2.credentials import EnvironmentVariableCredentialsProvider
+
+# import oss2
+# from oss2.credentials import EnvironmentVariableCredentialsProvider
 
 # import matplotlib.pyplot as plt
 
 from pytorch_openpose.src.body import Body
 from utils import load_env_from_file
-from constants import SCREENSHOT_DIR
+from constants import SCREENSHOT_DIR, OPENPOSE_DIR
 
 # from pytorch_openpose.src import util
 
@@ -73,14 +74,14 @@ class OpenposeTask(Process):
         self.queue_file_path = queue_file_path
         self.size_limit = size_limit
 
-        # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
-        auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
+        # # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
+        # auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
 
-        # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
-        endpoint = "oss-ap-southeast-1.aliyuncs.com"
+        # # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
+        # endpoint = "oss-ap-southeast-1.aliyuncs.com"
 
-        # 填写Bucket名称，并设置连接超时时间为30秒。
-        self.bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
+        # # 填写Bucket名称，并设置连接超时时间为30秒。
+        # self.bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
 
     def run(self) -> None:
 
@@ -101,12 +102,23 @@ class OpenposeTask(Process):
 
         for i, (animation_name, elevation, azimuth, n_frame) in enumerate(queue_data):
 
-            object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/o.npy"
+            target_path = os.path.join(
+                OPENPOSE_DIR,
+                humanoid_name,
+                animation_name,
+                str(elevation),
+                str(azimuth),
+                str(n_frame),
+                "o.npy",
+            )
 
-            # check if `object_name` already exists in the bucket
-            if self.bucket.object_exists(object_name):
-                print(f"queue {queue_num}, {object_name} already exists in the bucket")
+            if os.path.exists(target_path):
+                print(
+                    f"queue_num {queue_num}, openpose target path already exists: {target_path}"
+                )
                 continue
+
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
 
             # # get oss screenshot image path, then save it to local tmp file
             # screenshot_path = f"screenshot/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}.jpg"
@@ -131,40 +143,57 @@ class OpenposeTask(Process):
 
             if joints_position is None:
 
-                exmpty_object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/empty.txt"
+                # exmpty_object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/empty.txt"
 
-                result = self.bucket.put_object(exmpty_object_name, "")
+                # result = self.bucket.put_object(exmpty_object_name, "")
+
+                empty_target_path = os.path.join(
+                    OPENPOSE_DIR,
+                    humanoid_name,
+                    animation_name,
+                    str(elevation),
+                    str(azimuth),
+                    str(n_frame),
+                    "empty",
+                )
+
+                np.save(empty_target_path, np.array([]))
 
                 print(f"queue {queue_num}, empty pose info from {screenshot_path}")
                 continue
 
             # convert the result from `openpose_predict` to bytes
-            joints_position_bytes = joints_position.tobytes()
+            np.save(target_path, joints_position)
+
+            if i and (i % 100 == 0):
+                print(
+                    f"queue {queue_num} progress {i}/{len(queue_data)}, results saved to {target_path}"
+                )
 
             # upload bytes to oss
-            result = self.bucket.put_object(object_name, joints_position_bytes)
+            # result = self.bucket.put_object(object_name, joints_position_bytes)
 
             # unlink `tmp_filename`
             # os.unlink(tmp_filename)
 
-            if int(result.status) != 200:
-                # output the local file path to local log
-                with open("upload-resnet-error.log", "a") as f:
-                    f.write(f"{object_name}\n")
+            # if int(result.status) != 200:
+            #     # output the local file path to local log
+            #     with open("upload-resnet-error.log", "a") as f:
+            #         f.write(f"{object_name}\n")
 
-                print(
-                    "queue {}, Upload failed! {} http status: {}".format(
-                        queue_num, object_name, result.status
-                    )
-                )
+            #     print(
+            #         "queue {}, Upload failed! {} http status: {}".format(
+            #             queue_num, object_name, result.status
+            #         )
+            #     )
 
-            if i % 1000 == 0:
-                # HTTP返回码。
-                print(
-                    "queue {}, {} http status: {}".format(
-                        queue_num, object_name, result.status
-                    )
-                )
+            # if i % 1000 == 0:
+            #     # HTTP返回码。
+            #     print(
+            #         "queue {}, {} http status: {}".format(
+            #             queue_num, object_name, result.status
+            #         )
+            #     )
 
 
 if __name__ == "__main__":

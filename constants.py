@@ -33,6 +33,8 @@ if True:
 
     RESNET_DIR = os.path.join(HOME_DIR, "Documents", "video2motion", "resnet")
 
+    OPENPOSE_DIR = os.path.join(HOME_DIR, "Documents", "video2motion", "openpose")
+
     MEDIAPIPE_QUEUE_DATA_DIR = os.path.join(
         HOME_DIR, "Documents", "video2motion", "queue_data", "mediapipe"
     )
