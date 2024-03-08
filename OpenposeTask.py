@@ -147,17 +147,18 @@ class OpenposeTask(Process):
 
                 # result = self.bucket.put_object(exmpty_object_name, "")
 
-                empty_target_path = os.path.join(
-                    OPENPOSE_DIR,
-                    humanoid_name,
-                    animation_name,
-                    str(elevation),
-                    str(azimuth),
-                    str(n_frame),
-                    "empty",
+                np.save(
+                    os.path.join(
+                        OPENPOSE_DIR,
+                        humanoid_name,
+                        animation_name,
+                        str(elevation),
+                        str(azimuth),
+                        str(n_frame),
+                        "empty",
+                    ),
+                    np.array([]),
                 )
-
-                np.save(empty_target_path, np.array([]))
 
                 print(f"queue {queue_num}, empty pose info from {screenshot_path}")
                 continue
