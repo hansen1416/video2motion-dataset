@@ -65,7 +65,12 @@ class OpenposeTask(Process):
 
     # override the constructor
     def __init__(self, queue_file_path, size_limit=None):
+
+        # execute the base constructor
+        Process.__init__(self)
+
         self.queue_file_path = queue_file_path
+        self.size_limit = size_limit
 
         # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
         auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
@@ -95,7 +100,7 @@ class OpenposeTask(Process):
 
         for i, (animation_name, elevation, azimuth, n_frame) in enumerate(queue_data):
 
-            object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/j.npy"
+            object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/o.npy"
 
             # check if `object_name` already exists in the bucket
             if self.bucket.object_exists(object_name):
@@ -106,25 +111,31 @@ class OpenposeTask(Process):
             screenshot_path = f"screenshot/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}.jpg"
             file_stream = self.bucket.get_object(screenshot_path)
 
-            with open("temp.jpg", "wb") as f:
+            tmp_filename = f"temp{queue_num}.jpg"
+
+            with open(tmp_filename, "wb") as f:
                 shutil.copyfileobj(file_stream, f)
+
             # prediction
-            joints_position = openpose_predict("temp.jpg")
+            joints_position = openpose_predict(tmp_filename)
 
             if joints_position is None:
 
                 exmpty_object_name = f"openpose/{humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/empty.txt"
 
                 result = self.bucket.put_object(exmpty_object_name, "")
+
+                print(f"queue {queue_num}, empty pose info from {screenshot_path}")
                 continue
 
             # convert the result from `openpose_predict` to bytes
             joints_position_bytes = joints_position.tobytes()
 
             # upload bytes to oss
-            result = self.bucket.put_object_from_file(
-                object_name, joints_position_bytes
-            )
+            result = self.bucket.put_object(object_name, joints_position_bytes)
+
+            # unlink `tmp_filename`
+            os.unlink(tmp_filename)
 
             if int(result.status) != 200:
                 # output the local file path to local log

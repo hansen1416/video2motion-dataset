@@ -9,6 +9,7 @@ from constants import (
     ANIM_EULER_LOCAL_DIR,
 )
 from ResnetTask import ResnetTask
+from OpenposeTask import OpenposeTask
 from BuildDatasetsTask import BuildDatasetsTask
 from UploadScreenshotTask import UploadScreenshotTask
 from UploadMediapipeTask import UploadMediapipeTask
@@ -58,10 +59,18 @@ if __name__ == "__main__":
             )
             for q in queue_files
         ]
-    elif True:
+    elif False:
         processes = [
             UploadResnetTask(
                 queue_file_path=q,
+            )
+            for q in queue_files
+        ]
+    elif True:
+        processes = [
+            OpenposeTask(
+                queue_file_path=q,
+                size_limit=4,
             )
             for q in queue_files
         ]

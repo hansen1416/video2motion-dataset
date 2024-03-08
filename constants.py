@@ -14,7 +14,7 @@ import os
 
 HOME_DIR = os.path.expanduser("~")
 
-QUEUE_DIR = os.path.join(HOME_DIR, "Repos", "video2motion-screenshots", "queues")
+QUEUE_DIR = os.path.join(HOME_DIR, "Documents", "video2motion-screenshots", "queues")
 
 ANIM_EULER_LOCAL_DIR = os.path.join(
     HOME_DIR,
