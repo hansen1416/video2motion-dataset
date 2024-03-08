@@ -70,7 +70,7 @@ if __name__ == "__main__":
         processes = [
             OpenposeTask(
                 queue_file_path=q,
-                size_limit=4,
+                # size_limit=4,
             )
             for q in queue_files
         ]
