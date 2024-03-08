@@ -1,8 +1,7 @@
-from time import sleep
-import time
 import os
 import json
 
+import oss2
 import numpy as np
 from multiprocessing import Process
 
@@ -45,60 +44,27 @@ class BuildDatasetsTask(Process):
 
     def read_resnet_data(self, animation_name, elevation, azimuth, n_frame):
 
-        if self.source == "oss":
+        file_path = f"resnet/{self.humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/18.npy"
 
-            file_path = f"{self.resnet_features_path}/{self.humanoid_name}/{animation_name}/{elevation}/{azimuth}/{n_frame}/feature.npy"
+        try:
+            landmarks_obj = self.bucket.get_object(file_path)
+        except oss2.exceptions.NoSuchKey:
+            print(f"oss2.exceptions.NoSuchKey: {file_path}")
+            return
 
-            return None
-            # try:
-            #     landmarks_obj = self.bucket.get_object(file_path)
-            # except oss2.exceptions.NoSuchKey:
-            #     print(f"oss2.exceptions.NoSuchKey: {file_path}")
-            #     return
-
-            # return json.loads(landmarks_obj.read())
-        else:
-
-            file_path = os.path.join(
-                self.resnet_features_path,
-                self.humanoid_name,
-                animation_name,
-                str(elevation),
-                str(azimuth),
-                str(n_frame),
-                "feature.npy",
-            )
-
-            if not os.path.exists(file_path):
-                print(f"file not found at path: {file_path}")
-                return
-
-            # with open(file_path, "r") as f:
-            return np.load(file_path)
+        return json.loads(landmarks_obj.read())
 
     def read_anim_euler_data(self, animation_name):
 
-        if self.source == "oss":
+        file_path = f"anim-json-euler/{animation_name}"
 
-            file_path = f"{self.anim_euler_path}/{animation_name}"
+        try:
+            anim_euler_obj = self.bucket.get_object(file_path)
+        except oss2.exceptions.NoSuchKey:
+            print(f"oss2.exceptions.NoSuchKey: {file_path}")
             return
-            # try:
-            #     anim_euler_obj = self.bucket.get_object(file_path)
-            # except oss2.exceptions.NoSuchKey:
-            #     print(f"oss2.exceptions.NoSuchKey: {file_path}")
-            #     return
 
-            # return json.loads(anim_euler_obj.read())
-        else:
-
-            file_path = os.path.join(self.anim_euler_path, animation_name)
-
-            if not os.path.exists(file_path):
-                print(f"file not found at path: {file_path}")
-                return
-
-            with open(file_path, "r") as f:
-                return json.load(f)
+        return json.loads(anim_euler_obj.read())
 
     # override the run function
     def run(self):
