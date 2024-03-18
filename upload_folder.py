@@ -45,9 +45,9 @@ class UploadTask(Process):
         self.oss_path = oss_path
         self.process_idx = process_idx
 
-        # if oss_path is empty, take the dirname of the first file
+        # if oss_path is empty, take the last folder name of the first file
         if not oss_path:
-            self.oss_path = os.path.dirname(file_list[0]) + "/"
+            self.oss_path = os.path.basename(os.path.dirname(file_list[0])) + "/"
 
         # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
         auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
