@@ -109,7 +109,6 @@ if __name__ == "__main__":
     processes = [
         UploadTask(
             file_list=chunk,
-            oss_path="videos/",
             process_idx=i,
         )
         for i, chunk in enumerate(file_chunks)
