@@ -47,7 +47,7 @@ class UploadTask(Process):
 
         # if oss_path is empty, take the dirname of the first file
         if not oss_path:
-            self.oss_path = os.path.dirname(file_list[0])
+            self.oss_path = os.path.dirname(file_list[0]) + "/"
 
         # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
         auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
@@ -81,7 +81,7 @@ class UploadTask(Process):
                 filepath,
             )
 
-            print(f"{self.process_idx}: uploaded {filepath} to oss")
+            print(f"{self.process_idx}: uploaded {filepath} to {target_path}")
 
 
 if __name__ == "__main__":
@@ -109,6 +109,7 @@ if __name__ == "__main__":
     processes = [
         UploadTask(
             file_list=chunk,
+            oss_path="videos/",
             process_idx=i,
         )
         for i, chunk in enumerate(file_chunks)
