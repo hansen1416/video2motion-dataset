@@ -57,65 +57,6 @@ def decode(filename):
     ], metadata
 
 
-data_dir = os.path.join(
-    os.path.expanduser("~"), "Documents", "video2motion", "detectron2d"
-)
-
-# filenames = os.listdir(data_dir)
-
-
-# print(filenames)
-
-# for filename in filenames:
-
-#     data = np.load(
-#         os.path.join(data_dir, filename), encoding="latin1", allow_pickle=True
-#     )
-
-#     print(data)
-
-#     break
-
-
-filename = "Zombie Turn-30-0.avi.npz"
-
-[data_obj], metadata = decode(os.path.join(data_dir, filename))
-
-start_frame = data_obj["start_frame"]
-end_frame = data_obj["end_frame"]
-bounding_boxes = data_obj["bounding_boxes"]
-keypoints = data_obj["keypoints"]
-
-print(start_frame, end_frame)
-print(bounding_boxes.shape)
-print(keypoints.shape)
-print(metadata)
-
-"""
-
-keypoints = [
-    "nose",
-    "left_eye",
-    "right_eye",
-    "left_ear",
-    "right_ear",
-    "left_shoulder",
-    "right_shoulder",
-    "left_elbow",
-    "right_elbow",
-    "left_wrist",
-    "right_wrist",
-    "left_hip",
-    "right_hip",
-    "left_knee",
-    "right_knee",
-    "left_ankle",
-    "right_ankle",
-]
-"""
-
-print(keypoints[0])
-
 # print(kp)
 
 
@@ -190,4 +131,27 @@ def visualize_keypoints2d(keypoints, width, height):
     imageio.mimsave("output.gif", frames, fps=25)  # Adjust fps as needed
 
 
-visualize_keypoints2d(keypoints, metadata["w"], metadata["h"])
+def load_keypoints(filename):
+
+    data_dir = os.path.join(
+        os.path.expanduser("~"), "Documents", "video2motion", "detectron2d"
+    )
+
+    [data_obj], metadata = decode(os.path.join(data_dir, filename))
+
+    start_frame = data_obj["start_frame"]
+    end_frame = data_obj["end_frame"]
+    bounding_boxes = data_obj["bounding_boxes"]
+    # (num_frames, num_keypoints, 2)
+    keypoints = data_obj["keypoints"]
+
+    return keypoints, metadata
+
+
+if __name__ == "__main__":
+
+    filename = "Walking (9)-30-0.avi.npz"
+
+    keypoints, metadata = load_keypoints(filename)
+
+    visualize_keypoints2d(keypoints, metadata["w"], metadata["h"])
