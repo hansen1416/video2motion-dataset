@@ -1,5 +1,7 @@
 import os
 import glob
+import random
+import string
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +9,18 @@ import imageio  # for video/GIF generation
 from mpl_toolkits.mplot3d import Axes3D  # Import for 3d plotting
 
 
+def random_string(string_length):
+    # Define the character set for the random string
+    chars = string.ascii_letters + string.digits
+
+    # Generate a random string
+    return ''.join(random.choice(chars) for _ in range(string_length))
+
+
 # Function to plot a single frame with 3D keypoints
-def plot_frame(frame_data, frame_number, width, height, depth):
+def plot_frame(frame_data, frame_number):
+
+    print(f"processing frame {frame_number}")
 
     # Define body joint connections (modify based on your keypoint definition)
     skeleton = [
@@ -71,14 +83,11 @@ def plot_frame(frame_data, frame_number, width, height, depth):
     return data
 
 
-def visualize_keypoints3d(keypoints, width, height, depth):
+def visualize_keypoints3d(keypoints, name=None):
     """
     Args:
         keypoints: Numpy array with shape (num_frames, num_keypoints, 2), typically num_keypoints=17
     """
-
-    # keypoints[:, :, 0] = width - keypoints[:, :, 0]
-    # keypoints[:, :, 1] = height - keypoints[:, :, 1]
 
     # Create video or GIF (optional)
     frames = []
@@ -90,6 +99,10 @@ def visualize_keypoints3d(keypoints, width, height, depth):
             keypoints[i], i + 1, width, height, depth
         )  # Plot keypoints on each frame
         frames.append(frame_data)
+
+    if name is None:
+        # generate a random name
+        name = random_string(8)
 
     # Example for GIF using imageio
     imageio.mimsave("output.gif", frames, fps=25)  # Adjust fps as needed
@@ -111,8 +124,8 @@ if __name__ == "__main__":
 
         data = np.load(filename)
 
-        print(data.shape)
+        print(filename)
 
-        visualize_keypoints3d(data, width, height, depth)
+        visualize_keypoints3d(data)
 
         break
