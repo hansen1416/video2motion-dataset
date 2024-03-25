@@ -42,11 +42,34 @@ def plot_frame(frame_data, frame_number, fig, ax):
         [14, 16],
     ]
 
+    labels = [ 
+        "pelvis",
+        "left_hip",
+        "right_hip",
+        "nose",
+        "spine",
+        "neck",
+        "head",
+        "left_shoulder",
+        "left_elbow",
+        "left_hand",
+        "right_shoulder",
+        "right_elbow",
+        "right_hand",
+        "left_knee",
+        "left_foot",
+        "right_knee",
+        "right_foot"
+    ]
+
     # Clear previous plot (if applicable)
     ax.cla()
 
     # Plot keypoints in 3D
     ax.scatter3D(frame_data[:, 0], frame_data[:, 1], frame_data[:, 2], c="red")
+
+    for i in range(len(frame_data)):
+        ax.text(frame_data[i, 0], frame_data[i, 1], frame_data[i, 2], labels[i], color="black")
 
     # for joint in skeleton:
     #     start_point = frame_data[joint[0]]
@@ -89,7 +112,7 @@ def visualize_keypoints3d(keypoints, name=None):
     frames = []
 
     # Create the figure with the specified size
-    fig = plt.figure(figsize=(16, 12))
+    fig = plt.figure(figsize=(16*2, 12*2))
 
     ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
@@ -97,6 +120,9 @@ def visualize_keypoints3d(keypoints, name=None):
         
         frame_data = plot_frame(keypoints[i], i, fig, ax)  # Plot keypoints on each frame
         frames.append(frame_data)
+
+        if i > 1:
+            break
 
     if name is None:
         # generate a random name
