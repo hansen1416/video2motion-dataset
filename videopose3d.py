@@ -140,9 +140,7 @@ if __name__ == "__main__":
 
     filenames = glob.glob(os.path.join(data_dir, "*.npy"))
 
-    width = 1
-    height = 1
-    depth = 1
+    ct = 0
 
     for filename in filenames:
 
@@ -152,4 +150,7 @@ if __name__ == "__main__":
 
         visualize_keypoints3d(data, name=anim_name)
 
-        break
+        ct += 1
+
+        if ct > 10:
+            break
