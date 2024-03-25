@@ -45,21 +45,21 @@ def plot_frame(frame_data, frame_number, fig, ax):
     labels = [ 
         "pelvis",
         "left_hip",
-        "nose",
-        "left_shoulder",
+        "left_knee",
+        "left_foot",
         "right_hip",
-        "left_elbow",
-        "head",
+        "right_knee",
+        "right_foot",
         "spine",
         "neck",
-        "left_hand",
+        "nose",
+        "top",
         "right_shoulder",
         "right_elbow",
         "right_hand",
-        "left_knee",
-        "left_foot",
-        "right_knee",
-        "right_foot"
+        "left_shoulder",
+        "left_elbow",
+        "left_hand"
     ]
 
     # Clear previous plot (if applicable)
