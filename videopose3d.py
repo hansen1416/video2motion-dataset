@@ -18,7 +18,7 @@ def random_string(string_length):
 
 
 # Function to plot a single frame with 3D keypoints
-def plot_frame(frame_data, frame_number):
+def plot_frame(frame_data, frame_number, fig, ax):
 
     print(f"processing frame {frame_number}")
 
@@ -41,10 +41,6 @@ def plot_frame(frame_data, frame_number):
         [13, 15],
         [14, 16],
     ]
-    # Create the figure with the specified size
-    fig = plt.figure(figsize=(8, 6))
-
-    ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
     # Clear previous plot (if applicable)
     ax.cla()
@@ -92,12 +88,14 @@ def visualize_keypoints3d(keypoints, name=None):
     # Create video or GIF (optional)
     frames = []
 
+    # Create the figure with the specified size
+    fig = plt.figure(figsize=(8, 6))
+
+    ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
+
     for i in range(len(keypoints)):
         
-
-        frame_data = plot_frame(
-            keypoints[i], i + 1, width, height, depth
-        )  # Plot keypoints on each frame
+        frame_data = plot_frame(keypoints[i], i, fig, ax)  # Plot keypoints on each frame
         frames.append(frame_data)
 
     if name is None:
@@ -105,7 +103,7 @@ def visualize_keypoints3d(keypoints, name=None):
         name = random_string(8)
 
     # Example for GIF using imageio
-    imageio.mimsave("output.gif", frames, fps=25)  # Adjust fps as needed
+    imageio.mimsave(f"{name}.gif", frames, fps=50)  # Adjust fps as needed
 
 
 if __name__ == "__main__":
@@ -124,8 +122,8 @@ if __name__ == "__main__":
 
         data = np.load(filename)
 
-        print(filename)
+        anim_name= os.path.basename(filename).replace(".npy", "").replace(".avi", "")
 
-        visualize_keypoints3d(data)
+        visualize_keypoints3d(data, name=anim_name)
 
         break
