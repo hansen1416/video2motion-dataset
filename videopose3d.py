@@ -45,9 +45,9 @@ def plot_frame(frame_data, frame_number, fig, ax):
     labels = [ 
         "pelvis",
         "left_hip",
-        "right_hip",
         "nose",
         "spine",
+        "right_hip",
         "neck",
         "head",
         "left_shoulder",
