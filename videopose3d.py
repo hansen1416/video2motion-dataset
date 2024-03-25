@@ -6,7 +6,8 @@ import string
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio  # for video/GIF generation
-from mpl_toolkits.mplot3d import Axes3D  # Import for 3d plotting
+
+# from mpl_toolkits.mplot3d import Axes3D  # Import for 3d plotting
 
 
 def random_string(string_length):
@@ -14,7 +15,7 @@ def random_string(string_length):
     chars = string.ascii_letters + string.digits
 
     # Generate a random string
-    return ''.join(random.choice(chars) for _ in range(string_length))
+    return "".join(random.choice(chars) for _ in range(string_length))
 
 
 # Function to plot a single frame with 3D keypoints
@@ -23,26 +24,7 @@ def plot_frame(frame_data, frame_number, fig, ax):
     print(f"processing frame {frame_number}")
 
     # Define body joint connections (modify based on your keypoint definition)
-    skeleton = [
-        [0, 1],
-        [0, 2],
-        [1, 3],
-        [2, 4],  # Head
-        [5, 6],
-        [5, 7],
-        [7, 9],
-        [6, 8],
-        [8, 10],  # Arms
-        [5, 11],
-        [6, 12],
-        [11, 12],  # Body
-        [11, 13],
-        [12, 14],
-        [13, 15],
-        [14, 16],
-    ]
-
-    labels = [ 
+    labels = [
         "pelvis",
         "left_hip",
         "left_knee",
@@ -59,7 +41,26 @@ def plot_frame(frame_data, frame_number, fig, ax):
         "right_hand",
         "left_shoulder",
         "left_elbow",
-        "left_hand"
+        "left_hand",
+    ]
+
+    skeleton = [
+        ["pelvis", "left_hip"],
+        ["left_hip", "left_knee"],
+        ["left_knee", "left_foot"],
+        ["pelvis", "right_hip"],
+        ["right_hip", "right_knee"],
+        ["right_knee", "right_foot"],
+        ["pelvis", "spine"],
+        ["spine", "neck"],
+        ["neck", "nose"],
+        ["nose", "top"],
+        ["neck", "right_shoulder"],
+        ["right_shoulder", "right_elbow"],
+        ["right_elbow", "right_hand"],
+        ["neck", "left_shoulder"],
+        ["left_shoulder", "left_elbow"],
+        ["left_elbow", "left_hand"],
     ]
 
     # Clear previous plot (if applicable)
@@ -69,18 +70,24 @@ def plot_frame(frame_data, frame_number, fig, ax):
     ax.scatter3D(frame_data[:, 0], frame_data[:, 1], frame_data[:, 2], c="red")
 
     for i in range(len(frame_data)):
-        ax.text(frame_data[i, 0], frame_data[i, 1], frame_data[i, 2], labels[i], color="black")
+        ax.text(
+            frame_data[i, 0],
+            frame_data[i, 1],
+            frame_data[i, 2],
+            labels[i],
+            color="black",
+        )
 
-    # for joint in skeleton:
-    #     start_point = frame_data[joint[0]]
-    #     end_point = frame_data[joint[1]]
-    #     # Draw connections between points
-    #     ax.plot3D(
-    #         [start_point[0], end_point[0]],
-    #         [start_point[1], end_point[1]],
-    #         [start_point[2], end_point[2]],
-    #         color="blue",
-    #     )
+    for a, b in skeleton:
+        start_point = frame_data[labels.index(a)]
+        end_point = frame_data[labels.index(b)]
+        # Draw connections between points
+        ax.plot3D(
+            [start_point[0], end_point[0]],
+            [start_point[1], end_point[1]],
+            [start_point[2], end_point[2]],
+            color="blue",
+        )
 
     ax.set_title(f"Frame: {frame_number}")
     ax.set_xlim(-1.3, 1.3)  # Set limits based on data3
@@ -112,17 +119,19 @@ def visualize_keypoints3d(keypoints, name=None):
     frames = []
 
     # Create the figure with the specified size
-    fig = plt.figure(figsize=(16*2, 12*2))
+    fig = plt.figure(figsize=(16 * 2, 12 * 2))
 
     ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
     for i in range(len(keypoints)):
-        
-        frame_data = plot_frame(keypoints[i], i, fig, ax)  # Plot keypoints on each frame
+
+        frame_data = plot_frame(
+            keypoints[i], i, fig, ax
+        )  # Plot keypoints on each frame
         frames.append(frame_data)
 
-        if i > 1:
-            break
+        # if i > 1:
+        #     break
 
     if name is None:
         # generate a random name
@@ -146,11 +155,11 @@ if __name__ == "__main__":
 
         data = np.load(filename)
 
-        anim_name= os.path.basename(filename).replace(".npy", "").replace(".avi", "")
+        anim_name = os.path.basename(filename).replace(".npy", "").replace(".avi", "")
 
         visualize_keypoints3d(data, name=anim_name)
 
         ct += 1
 
-        if ct > 10:
+        if ct >= 10:
             break
