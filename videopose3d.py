@@ -29,36 +29,46 @@ def plot_frame(frame_data, frame_number, width, height, depth):
         [13, 15],
         [14, 16],
     ]
+    # Create the figure with the specified size
+    fig = plt.figure(figsize=(8, 6))
 
-    fig = plt.figure()  # Create a new figure for 3D plot
     ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
     # Clear previous plot (if applicable)
     ax.cla()
 
     # Plot keypoints in 3D
-    ax.scatter(frame_data[:, 0], frame_data[:, 1], frame_data[:, 2], c="red")
+    ax.scatter3D(frame_data[:, 0], frame_data[:, 1], frame_data[:, 2], c="red")
 
-    for joint in skeleton:
-        start_point = frame_data[joint[0]]
-        end_point = frame_data[joint[1]]
-        # Draw connections between points
-        ax.plot3D(
-            [start_point[0], end_point[0]],
-            [start_point[1], end_point[1]],
-            [start_point[2], end_point[2]],
-            color="blue",
-        )
+    # for joint in skeleton:
+    #     start_point = frame_data[joint[0]]
+    #     end_point = frame_data[joint[1]]
+    #     # Draw connections between points
+    #     ax.plot3D(
+    #         [start_point[0], end_point[0]],
+    #         [start_point[1], end_point[1]],
+    #         [start_point[2], end_point[2]],
+    #         color="blue",
+    #     )
 
     ax.set_title(f"Frame: {frame_number}")
-    ax.set_xlim(0, width)  # Set limits based on data
-    ax.set_ylim(0, height)
-    ax.set_zlim(0, depth)  # Set z-axis limits based on your data range
+    ax.set_xlim(-1.3, 1.3)  # Set limits based on data3
+    ax.set_ylim(-1, 1)
+    ax.set_zlim(-1, 1)  # Set z-axis limits based on your data range
 
-    plt.close(fig)  # Close the figure to avoid memory leak
+    ax.view_init(azim=90, elev=90)
 
-    plt.draw()
-    plt.pause(0.001)  # Short pause to avoid rapid flickering
+    # plt.draw()
+    # plt.pause(0.001)  # Short pause to avoid rapid flickering
+    # If we haven't already shown or saved the plot, then we need to
+    # draw the figure first...
+    fig.canvas.draw()
+
+    # Now we can save it to a numpy array.
+    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+    return data
 
 
 def visualize_keypoints3d(keypoints, width, height, depth):
@@ -74,10 +84,10 @@ def visualize_keypoints3d(keypoints, width, height, depth):
     frames = []
 
     for i in range(len(keypoints)):
-        frame_data = keypoints[i]
+        
 
-        plot_frame(
-            frame_data, i + 1, width, height, depth
+        frame_data = plot_frame(
+            keypoints[i], i + 1, width, height, depth
         )  # Plot keypoints on each frame
         frames.append(frame_data)
 
