@@ -89,7 +89,7 @@ def visualize_keypoints3d(keypoints, name=None):
     frames = []
 
     # Create the figure with the specified size
-    fig = plt.figure(figsize=(8, 6))
+    fig = plt.figure(figsize=(16, 12))
 
     ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
