@@ -11,5 +11,5 @@ if __name__ == "__main__":
     # Load the dataset
     data = np.load(os.path.join(customset_dir, "20240322-2086.npz"), allow_pickle=True)
 
-    print(data["positions_2d"])
-    print(data["metadata"])
+    print(type(data["positions_2d"]))
+    print(type(data["metadata"]))
