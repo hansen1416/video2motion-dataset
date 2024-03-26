@@ -1,4 +1,5 @@
 import os
+import glob
 import numpy as np
 
 
@@ -8,8 +9,28 @@ if __name__ == "__main__":
         os.path.expanduser("~"), "Documents", "video2motion", "custom_dataset"
     )
 
-    # Load the dataset
-    data = np.load(os.path.join(customset_dir, "20240322-2086.npz"), allow_pickle=True)
+    res2d_dir = os.path.join(
+        os.path.expanduser("~"), "Documents", "video2motion", "detectron2d"
+    )
 
-    print(type(data["positions_2d"]))
-    print(type(data["metadata"]))
+    res3d_dir = os.path.join(
+        os.path.expanduser("~"), "Documents", "video2motion", "results3d"
+    )
+
+    # Load 2D pose data
+    res2d_files = glob.glob(os.path.join(res2d_dir, "*.npz"))
+
+    for res2d_file in res2d_files:
+        res2d = np.load(res2d_file, allow_pickle=True)
+        print(res2d["keypoints"])
+
+        break
+
+    # Load 3D pose data
+    res3d_files = glob.glob(os.path.join(res3d_dir, "*.npy"))
+
+    for res3d_file in res3d_files:
+        res3d = np.load(res3d_file)
+        print(res3d.shape)
+
+        break
