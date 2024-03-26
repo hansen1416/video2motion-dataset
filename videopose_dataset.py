@@ -22,7 +22,12 @@ if __name__ == "__main__":
 
     for res2d_file in res2d_files:
         res2d = np.load(res2d_file, allow_pickle=True)
-        print(res2d["keypoints"])
+        # print(res2d["keypoints"])
+
+        keypoints = res2d["keypoints"][:, 1:]
+
+        # print(res2d["keypoints"][0, 1])
+        print(keypoints)
 
         break
 

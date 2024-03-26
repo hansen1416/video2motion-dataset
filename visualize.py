@@ -105,8 +105,8 @@ def plot_frame2d(frame_data, frame_number, width, height, fig):
             color="blue",
         )  # Draw connections
     plt.title(f"Frame: {frame_number}")
-    plt.xlim(0, width)  # Set limits based on data
-    plt.ylim(0, height)
+    plt.xlim(-1.3, 1.3)  # Set limits based on data
+    plt.ylim(-1, 1)
 
     fig.canvas.draw()
 
@@ -137,8 +137,8 @@ def visualize_keypoints2d(filename):
 
     width, height = metadata["w"], metadata["h"]
 
-    keypoints[:, :, 0] = width - keypoints[:, :, 0]
-    keypoints[:, :, 1] = height - keypoints[:, :, 1]
+    keypoints[:, :, 0] = (width - keypoints[:, :, 0] - (width / 2)) / (width / 2)
+    keypoints[:, :, 1] = (height - keypoints[:, :, 1] - (height / 2)) / (height / 2)
 
     # Create the figure with the specified size
     fig = plt.figure(figsize=(16 * 2, 12 * 2))
@@ -292,4 +292,4 @@ if __name__ == "__main__":
 
     visualize_keypoints2d(filename)
 
-    visualize_keypoints3d(filename)
+    # visualize_keypoints3d(filename)
