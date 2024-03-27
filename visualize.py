@@ -155,8 +155,12 @@ def visualize_keypoints2d(filename):
 
     anim_name = os.path.basename(filename).replace(".avi", "")
 
+    os.makedirs("gifs", exist_ok=True)
+
     # Example for GIF using imageio
-    imageio.mimsave(f"{anim_name}2d.gif", frames, fps=50)  # Adjust fps as needed
+    imageio.mimsave(
+        os.path.join("gifs", f"{anim_name}2d.gif"), frames, fps=50
+    )  # Adjust fps as needed
 
 
 # Function to plot a single frame with 3D keypoints
@@ -287,8 +291,12 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
         else:
             anim_name = random_string(8)
 
+    os.makedirs("gifs", exist_ok=True)
+
     # Example for GIF using imageio
-    imageio.mimsave(f"{anim_name}3d.gif", frames, fps=50)  # Adjust fps as needed
+    imageio.mimsave(
+        os.path.join("gifs", f"{anim_name}3d.gif"), frames, fps=50
+    )  # Adjust fps as needed
 
     print(f"Saved 3D animation as GIF {anim_name}3d.gif")
 
