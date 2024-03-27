@@ -250,17 +250,21 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     return data
 
 
-def visualize_keypoints3d(anim_name):
+def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
     """
     Args:
         keypoints: Numpy array with shape (num_frames, num_keypoints, 2), typically num_keypoints=17
     """
+    assert (
+        filename is not None or keypoints is not None
+    ), "Either filename or keypoints must be provided"
 
     data_dir = os.path.join(
         os.path.expanduser("~"), "Documents", "video2motion", "results3d"
     )
 
-    keypoints = np.load(os.path.join(data_dir, f"{filename}.npy"))
+    if keypoints is None:
+        keypoints = np.load(os.path.join(data_dir, f"{filename}.npy"))
 
     # Create video or GIF (optional)
     frames = []
@@ -277,13 +281,16 @@ def visualize_keypoints3d(anim_name):
         )  # Plot keypoints on each frame
         frames.append(frame_data)
 
-        # if i > 1:
-        #     break
-
-    anim_name = os.path.basename(filename).replace(".avi", "")
+    if anim_name is None:
+        if filename is not None:
+            anim_name = os.path.basename(filename).replace(".avi", "")
+        else:
+            anim_name = random_string(8)
 
     # Example for GIF using imageio
     imageio.mimsave(f"{anim_name}3d.gif", frames, fps=50)  # Adjust fps as needed
+
+    print(f"Saved 3D animation as GIF {anim_name}3d.gif")
 
 
 if __name__ == "__main__":
