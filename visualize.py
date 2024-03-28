@@ -307,13 +307,7 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
     print(f"Saved 3D animation as GIF {anim_name}3d.gif")
 
 
-if __name__ == "__main__":
-
-    filename = "Walking (9)-30-0.avi"
-
-    # visualize_keypoints2d(filename)
-
-    # visualize_keypoints3d(filename)
+def euler2points(frame_euler):
 
     bones_to_use = [
         "Hips",
@@ -334,16 +328,31 @@ if __name__ == "__main__":
         "LeftForeArm",
     ]
 
+    print(frame_euler.shape)
+
+
+def visualize_euler():
+
     res3ds_dir = os.path.join(
         os.path.expanduser("~"), "Documents", "video2motion", "results3d_dataset"
     )
 
     euler_data = np.load(os.path.join(res3ds_dir, "anim_euler_data.npy"))
 
-    print(euler_data.shape, euler_data[0][0][0])
+    for i in range(len(euler_data)):
+        frame_euler = euler_data[i]
 
-    v1 = np.array([0, 1, 0])
+        points = euler2points(frame_euler)
 
-    v2 = vector_apply_euler_arr(v1.tolist(), euler_data[10][0][0].tolist())
+        break
 
-    print(v2)
+
+if __name__ == "__main__":
+
+    filename = "Walking (9)-30-0.avi"
+
+    # visualize_keypoints2d(filename)
+
+    # visualize_keypoints3d(filename)
+
+    visualize_euler()
