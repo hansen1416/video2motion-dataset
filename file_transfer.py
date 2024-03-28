@@ -22,8 +22,9 @@ if __name__ == "__main__":
         folder_path=os.path.join(
             os.path.expanduser("~"),
             "Documents",
-            "video2motion-animsaver",
-            "data",
+            "video2motion-animplayer",
+            "public",
+            "anim-euler-uniform",
         ),
         bucket_name="pose-daten",
         oss_endpoint="oss-ap-southeast-1.aliyuncs.com",

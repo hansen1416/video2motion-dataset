@@ -63,17 +63,17 @@ def anim_data_loader(json_data, start_frame=0, end_frame=30):
 
     for bone in bones_to_use:
 
-        values = np.array(json_data[bone]["values"])
+        values = np.array(json_data[bone])
 
         # we must consider the time, because the time step is not always 0.166666 ms
 
-        print(
-            "values.shape",
-            values.shape,
-            start_frame,
-            end_frame,
-            values[start_frame:end_frame, :].shape,
-        )
+        # print(
+        #     "values.shape",
+        #     values.shape,
+        #     start_frame,
+        #     end_frame,
+        #     values[start_frame:end_frame, :].shape,
+        # )
 
         data_bones.append(values[start_frame:end_frame, :])
 
@@ -85,7 +85,7 @@ def anim_data_loader(json_data, start_frame=0, end_frame=30):
     # convert it to frame wise data, shape (30, 16, 3)
     data_bones_frame = np.transpose(data_bones, (1, 0, 2))
 
-    print(data_bones_frame.shape)
+    # print(data_bones_frame.shape)
 
     return data_bones_frame
 
@@ -108,9 +108,13 @@ def anim_data_loader(json_data, start_frame=0, end_frame=30):
     # print(np.allclose(data_bones_naive, data_bones_frame))
 
 
-def concatenate3d():
+def concatenate3d(overwrite=False):
     anim_euler_dir = os.path.join(
-        os.path.expanduser("~"), "Documents", "video2motion", "anim-json-euler"
+        os.path.expanduser("~"),
+        "Documents",
+        "video2motion-animplayer",
+        "public",
+        "anim-euler-uniform",
     )
 
     res3d_dir = os.path.join(
@@ -128,7 +132,8 @@ def concatenate3d():
     anim_euler_data_file = os.path.join(res3ds_dir, "anim_euler_data.npy")
 
     if (
-        os.path.exists(res3d_data_file)
+        overwrite == False
+        and os.path.exists(res3d_data_file)
         and os.path.exists(res3d_metadata_file)
         and os.path.exists(anim_euler_data_file)
     ):
@@ -147,11 +152,20 @@ def concatenate3d():
 
     interval_length = 30
 
+    limit = -1
+    counter = 0
+
     for res3d_file in res3d_files:
+
+        if "Run To Dive-30-0" not in res3d_file:
+            continue
+
         res3d = np.load(res3d_file)
         # print(res3d.shape[0])
 
         anim_name = os.path.basename(res3d_file).replace(".npy", "").replace(".avi", "")
+
+        print(anim_name)
 
         anim_name_raw = re.sub(r"-\d+-\d+", "", anim_name)
 
@@ -172,14 +186,25 @@ def concatenate3d():
             res3d_data.append(res3d[start_frame:end_frame])
             res3d_metadata.append(tuple([anim_name, start_frame, end_frame]))
 
-            anim_euler_data.append(
-                anim_data_loader(
-                    anim_euler, start_frame=start_frame, end_frame=end_frame
-                )
+            euler_data = anim_data_loader(
+                anim_euler, start_frame=start_frame, end_frame=end_frame
             )
+
+            assert euler_data.shape == (
+                30,
+                16,
+                3,
+            ), f"euler_data shape is not (30, 16, 3) {str(euler_data.shape)}"
+
+            anim_euler_data.append(euler_data)
             # return
 
             end_frame += interval_length
+
+        counter += 1
+
+        if limit > 0 and counter >= limit:
+            break
 
     # save `res3d_data` to npy file
     res3d_data = np.array(res3d_data, dtype=np.float32)
@@ -193,6 +218,8 @@ def concatenate3d():
 
     anim_euler_data = np.array(anim_euler_data, dtype=np.float32)
 
+    print(anim_euler_data.shape)
+
     np.save(os.path.join(res3ds_dir, "anim_euler_data.npy"), anim_euler_data)
 
     return res3d_data, res3d_metadata, anim_euler_data
@@ -202,7 +229,7 @@ if __name__ == "__main__":
 
     from visualize import visualize_keypoints3d
 
-    res3d_data, res3d_metadata, anim_euler_data = concatenate3d()
+    res3d_data, res3d_metadata, anim_euler_data = concatenate3d(overwrite=True)
 
     # print(res3d_data.shape, res3d_data.dtype)
     # print(len(res3d_metadata))
