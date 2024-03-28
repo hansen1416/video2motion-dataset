@@ -7,6 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio  # for video/GIF generation
 
+from lib3d.lib import (
+    vector_apply_euler_arr,
+    quaternion_from_euler_arr,
+    vector_apply_quaternion_arr,
+)
+
 
 def random_string(string_length):
     # Define the character set for the random string
@@ -305,6 +311,39 @@ if __name__ == "__main__":
 
     filename = "Walking (9)-30-0.avi"
 
-    visualize_keypoints2d(filename)
+    # visualize_keypoints2d(filename)
 
     # visualize_keypoints3d(filename)
+
+    bones_to_use = [
+        "Hips",
+        "RightUpLeg",
+        "RightLeg",
+        "LeftUpLeg",
+        "LeftLeg",
+        "Spine",
+        "Spine1",
+        "Spine2",
+        "Neck",
+        "Head",
+        "RightShoulder",
+        "RightArm",
+        "RightForeArm",
+        "LeftShoulder",
+        "LeftArm",
+        "LeftForeArm",
+    ]
+
+    res3ds_dir = os.path.join(
+        os.path.expanduser("~"), "Documents", "video2motion", "results3d_dataset"
+    )
+
+    euler_data = np.load(os.path.join(res3ds_dir, "anim_euler_data.npy"))
+
+    print(euler_data.shape, euler_data[0][0][0])
+
+    v1 = np.array([0, 1, 0])
+
+    v2 = vector_apply_euler_arr(v1.tolist(), euler_data[10][0][0].tolist())
+
+    print(v2)
