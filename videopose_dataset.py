@@ -155,9 +155,11 @@ def concatenate3d(overwrite=False):
     limit = -1
     counter = 0
 
+    skip_anim = ["Run To Dive-30-0.avi.npy"]
+
     for res3d_file in res3d_files:
 
-        if "Run To Dive-30-0" not in res3d_file:
+        if os.path.basename(res3d_file) in skip_anim:
             continue
 
         res3d = np.load(res3d_file)
