@@ -9,9 +9,12 @@ if __name__ == "__main__":
     folder_downloader(
         bucket_name="pose-daten",
         oss_endpoint="oss-ap-southeast-1.aliyuncs.com",
-        oss_prefix="anim-json-euler/",
+        oss_prefix="anim-json/",
         target_dir=os.path.join(
-            os.path.expanduser("~"), "Documents", "video2motion", "anim-json-euler"
+            os.path.expanduser("~"),
+            "Documents",
+            "video2motion-animplayer",
+            "public," "anim-json",
         ),
     )
 
