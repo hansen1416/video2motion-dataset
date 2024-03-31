@@ -353,6 +353,6 @@ if __name__ == "__main__":
 
     # visualize_keypoints2d(filename)
 
-    # visualize_keypoints3d(filename)
+    visualize_keypoints3d(filename)
 
-    visualize_euler()
+    # visualize_euler()
