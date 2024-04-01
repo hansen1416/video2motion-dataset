@@ -273,6 +273,10 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
         os.path.expanduser("~"), "Documents", "video2motion", "results3d"
     )
 
+    # if `filename` not endswith .avi, add .avi
+    if filename is not None and not filename.endswith(".avi"):
+        filename = f"{filename}.avi"
+
     if keypoints is None:
         keypoints = np.load(os.path.join(data_dir, f"{filename}.npy"))
 
@@ -349,7 +353,7 @@ def visualize_euler():
 
 if __name__ == "__main__":
 
-    filename = "Walking (9)-30-0.avi"
+    filename = "180 Turn W_ Briefcase (1)-30-0"
 
     # visualize_keypoints2d(filename)
 
