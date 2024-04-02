@@ -245,7 +245,7 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     ax.set_ylim(-1, 1)
     ax.set_zlim(-1, 1)  # Set z-axis limits based on your data range
 
-    ax.view_init(azim=90, elev=90)
+    ax.view_init(azim=0, elev=0)
 
     # plt.draw()
     # plt.pause(0.001)  # Short pause to avoid rapid flickering
@@ -289,6 +289,9 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
     ax = fig.add_subplot(111, projection="3d")  # Initialize 3D subplot
 
     for i in range(len(keypoints)):
+
+        keypoints[i][:, 0] *= -1
+        keypoints[i][:, 1] *= -1
 
         frame_data = plot_frame3d(
             keypoints[i], i, fig, ax
@@ -353,10 +356,24 @@ def visualize_euler():
 
 if __name__ == "__main__":
 
-    filename = "180 Turn W_ Briefcase (1)-30-0"
+    results3d = os.listdir(
+        os.path.join(os.path.expanduser("~"), "Documents", "video2motion", "results3d")
+    )
+
+    # get random sample from results3d
+    # filenames = random.sample(results3d, 10)
+    filenames = [
+        "180 Turn W_ Briefcase (1)-30-0.avi.npy",
+        "Pull Plant-30-0.avi.npy",
+        "Receiver Catch-30-0.avi.npy",
+        "Sitting Clap (4)-30-0.avi.npy",
+        "Walking (9)-30-0.avi.npy",
+    ]
+
+    for filename in filenames:
+        filename = filename.replace(".npy", "")
+        visualize_keypoints3d(filename=filename)
 
     # visualize_keypoints2d(filename)
-
-    visualize_keypoints3d(filename)
 
     # visualize_euler()
