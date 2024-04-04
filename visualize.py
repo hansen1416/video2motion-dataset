@@ -246,11 +246,11 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     ax.set_zlim(-1, 1)  # Set z-axis limits based on your data range
 
     # set labels for x,y,z axes
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    ax.set_xlabel("x axis")
+    ax.set_ylabel("y axis")
+    ax.set_zlabel("z axis")
 
-    ax.view_init(azim=0, elev=0)
+    ax.view_init(azim=-90, elev=90)
 
     # plt.draw()
     # plt.pause(0.001)  # Short pause to avoid rapid flickering
@@ -296,7 +296,7 @@ def visualize_keypoints3d(
     for i in range(len(keypoints)):
 
         # keypoints[i][:, 0] *= -1
-        # keypoints[i][:, 1] *= -1
+        keypoints[i][:, 1] *= -1
 
         frame_data = plot_frame3d(
             keypoints[i], i, fig, ax
@@ -338,7 +338,7 @@ if __name__ == "__main__":
 
     for filename in filenames:
         filename = filename.replace(".npy", "")
-        visualize_keypoints3d(filename=filename, frame_limit=10)
+        visualize_keypoints3d(filename=filename, frame_limit=None)
 
     # visualize_keypoints2d(filename)
 
