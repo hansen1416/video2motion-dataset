@@ -7,11 +7,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio  # for video/GIF generation
 
-from lib3d.lib import (
-    vector_apply_euler_arr,
-    quaternion_from_euler_arr,
-    vector_apply_quaternion_arr,
-)
+# from lib3d.lib import (
+#     vector_apply_euler_arr,
+#     quaternion_from_euler_arr,
+#     vector_apply_quaternion_arr,
+# )
 
 
 def random_string(string_length):
@@ -245,6 +245,11 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     ax.set_ylim(-1, 1)
     ax.set_zlim(-1, 1)  # Set z-axis limits based on your data range
 
+    # set labels for x,y,z axes
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+
     ax.view_init(azim=0, elev=0)
 
     # plt.draw()
@@ -260,7 +265,9 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     return data
 
 
-def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
+def visualize_keypoints3d(
+    filename=None, keypoints=None, anim_name=None, frame_limit=None
+):
     """
     Args:
         keypoints: Numpy array with shape (num_frames, num_keypoints, 2), typically num_keypoints=17
@@ -269,9 +276,7 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
         filename is not None or keypoints is not None
     ), "Either filename or keypoints must be provided"
 
-    data_dir = os.path.join(
-        os.path.expanduser("~"), "Documents", "video2motion", "results3d"
-    )
+    data_dir = os.path.join("D:\\", "video2motion", "results3d")
 
     # if `filename` not endswith .avi, add .avi
     if filename is not None and not filename.endswith(".avi"):
@@ -290,13 +295,16 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
 
     for i in range(len(keypoints)):
 
-        keypoints[i][:, 0] *= -1
-        keypoints[i][:, 1] *= -1
+        # keypoints[i][:, 0] *= -1
+        # keypoints[i][:, 1] *= -1
 
         frame_data = plot_frame3d(
             keypoints[i], i, fig, ax
         )  # Plot keypoints on each frame
         frames.append(frame_data)
+
+        if frame_limit is not None and i == frame_limit:
+            break
 
     if anim_name is None:
         if filename is not None:
@@ -314,65 +322,23 @@ def visualize_keypoints3d(filename=None, keypoints=None, anim_name=None):
     print(f"Saved 3D animation as GIF {anim_name}3d.gif")
 
 
-def euler2points(frame_euler):
-
-    bones_to_use = [
-        "Hips",
-        "RightUpLeg",
-        "RightLeg",
-        "LeftUpLeg",
-        "LeftLeg",
-        "Spine",
-        "Spine1",
-        "Spine2",
-        "Neck",
-        "Head",
-        "RightShoulder",
-        "RightArm",
-        "RightForeArm",
-        "LeftShoulder",
-        "LeftArm",
-        "LeftForeArm",
-    ]
-
-    print(frame_euler.shape)
-
-
-def visualize_euler():
-
-    res3ds_dir = os.path.join(
-        os.path.expanduser("~"), "Documents", "video2motion", "results3d_dataset"
-    )
-
-    euler_data = np.load(os.path.join(res3ds_dir, "anim_euler_data.npy"))
-
-    for i in range(len(euler_data)):
-        frame_euler = euler_data[i]
-
-        points = euler2points(frame_euler)
-
-        break
-
-
 if __name__ == "__main__":
 
-    results3d = os.listdir(
-        os.path.join(os.path.expanduser("~"), "Documents", "video2motion", "results3d")
-    )
+    results3d = os.listdir(os.path.join("D:\\", "video2motion", "results3d"))
 
     # get random sample from results3d
     # filenames = random.sample(results3d, 10)
     filenames = [
         "180 Turn W_ Briefcase (1)-30-0.avi.npy",
-        "Pull Plant-30-0.avi.npy",
-        "Receiver Catch-30-0.avi.npy",
-        "Sitting Clap (4)-30-0.avi.npy",
-        "Walking (9)-30-0.avi.npy",
+        # "Receiver Catch-30-0.avi.npy",
+        # "Pull Plant-30-0.avi.npy",
+        # "Sitting Clap (4)-30-0.avi.npy",
+        # "Walking (9)-30-0.avi.npy",
     ]
 
     for filename in filenames:
         filename = filename.replace(".npy", "")
-        visualize_keypoints3d(filename=filename)
+        visualize_keypoints3d(filename=filename, frame_limit=10)
 
     # visualize_keypoints2d(filename)
 
