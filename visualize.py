@@ -250,7 +250,7 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     ax.set_ylabel("y axis")
     ax.set_zlabel("z axis")
 
-    ax.view_init(azim=-90, elev=90)
+    ax.view_init(azim=-90, elev=120)
 
     # plt.draw()
     # plt.pause(0.001)  # Short pause to avoid rapid flickering
@@ -330,10 +330,10 @@ if __name__ == "__main__":
     # filenames = random.sample(results3d, 10)
     filenames = [
         "180 Turn W_ Briefcase (1)-30-0.avi.npy",
-        # "Receiver Catch-30-0.avi.npy",
-        # "Pull Plant-30-0.avi.npy",
-        # "Sitting Clap (4)-30-0.avi.npy",
-        # "Walking (9)-30-0.avi.npy",
+        "Receiver Catch-30-0.avi.npy",
+        "Pull Plant-30-0.avi.npy",
+        "Sitting Clap (4)-30-0.avi.npy",
+        "Walking (9)-30-0.avi.npy",
     ]
 
     for filename in filenames:
