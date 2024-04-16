@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio  # for video/GIF generation
 
+from constants import BASE_DIR
+
 # from lib3d.lib import (
 #     vector_apply_euler_arr,
 #     quaternion_from_euler_arr,
@@ -129,9 +131,7 @@ def visualize_keypoints2d(filename):
         keypoints: Numpy array with shape (num_frames, num_keypoints, 2), typically num_keypoints=17
     """
 
-    data_dir = os.path.join(
-        os.path.expanduser("~"), "Documents", "video2motion", "detectron2d"
-    )
+    data_dir = os.path.join(BASE_DIR, "video2motion", "detectron2d")
 
     [data_obj], metadata = decode(os.path.join(data_dir, f"{filename}.npz"))
 
@@ -177,22 +177,22 @@ def plot_frame3d(frame_data, frame_number, fig, ax):
     # Define body joint connections (modify based on your keypoint definition)
     labels = [
         "pelvis",
-        "left_hip",
-        "left_knee",
-        "left_foot",
         "right_hip",
         "right_knee",
         "right_foot",
+        "left_hip",
+        "left_knee",
+        "left_foot",
         "spine",
         "neck",
         "nose",
         "top",
-        "right_shoulder",
-        "right_elbow",
-        "right_hand",
         "left_shoulder",
         "left_elbow",
         "left_hand",
+        "right_shoulder",
+        "right_elbow",
+        "right_hand",
     ]
 
     skeleton = [
@@ -276,7 +276,7 @@ def visualize_keypoints3d(
         filename is not None or keypoints is not None
     ), "Either filename or keypoints must be provided"
 
-    data_dir = os.path.join("D:\\", "video2motion", "results3d")
+    data_dir = os.path.join(BASE_DIR, "video2motion", "results3d")
 
     # if `filename` not endswith .avi, add .avi
     if filename is not None and not filename.endswith(".avi"):
@@ -324,7 +324,7 @@ def visualize_keypoints3d(
 
 if __name__ == "__main__":
 
-    results3d = os.listdir(os.path.join("D:\\", "video2motion", "results3d"))
+    results3d = os.listdir(os.path.join(BASE_DIR, "video2motion", "results3d"))
 
     # get random sample from results3d
     # filenames = random.sample(results3d, 10)

@@ -68,6 +68,10 @@ if True:
 #     RESNET_DIR = os.path.join("D:\\", "Documents", "video2motion", "resnet")
 
 
+BASE_DIR = os.path.join(os.path.expanduser("~"), "Documents")
+# BASE_DIR = "D:\\"
+
+
 if __name__ == "__main__":
 
     humanoid = "dors.glb"
