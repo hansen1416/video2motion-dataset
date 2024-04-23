@@ -104,7 +104,7 @@ def concatenate3d_anim_euler():
         pickle.dump(metadata, f)
 
 
-def check_data():
+def load_full_data():
     with open(
         os.path.join(
             BASE_DIR, "video2motion", "videopose3d_euler_dataset", "features.pkl"
@@ -132,17 +132,76 @@ def check_data():
     return features, targets, metadata
 
 
-if __name__ == "__main__":
+def trunk_data(max_frame=30):
 
-    import random
+    features, targets, metadata = load_full_data()
+
+    new_features = []
+    new_targets = []
+    new_metadata = []
+
+    for i in range(len(features)):
+
+        total_frame = metadata[i]["total_frame"]
+
+        for j in range(0, total_frame, max_frame):
+            if j + max_frame < total_frame:
+                new_features.append(features[i][j : j + max_frame])
+                new_targets.append(targets[i][j : j + max_frame])
+                new_metadata.append(
+                    {
+                        "name": metadata[i]["name"],
+                        "total_frame": max_frame,
+                        "start_frame": j,
+                        "end_frame": j + max_frame,
+                    }
+                )
+            else:
+                # if the remaining frames are less than max_frame
+                # take the last `max_frame` frames
+                new_features.append(features[i][total_frame - max_frame :])
+                new_targets.append(targets[i][total_frame - max_frame :])
+                new_metadata.append(
+                    {
+                        "name": metadata[i]["name"],
+                        "total_frame": max_frame,
+                        "start_frame": total_frame - max_frame,
+                        "end_frame": total_frame,
+                    }
+                )
+
+    new_features = np.array(new_features, dtype=np.float32)
+    new_targets = np.array(new_targets, dtype=np.float32)
+    # new_metadata = np.array(new_metadata)
+
+    # (17028, 30, 17, 3) (17028, 30, 12, 3) 17028
+    print(new_features.shape, new_targets.shape, len(new_metadata))
+
+    # save the new_features, new_targets to npy files
+    data_dir = os.path.join(
+        BASE_DIR, "video2motion", "videopose3d_euler_dataset_trunk30"
+    )
+
+    os.makedirs(data_dir, exist_ok=True)
+
+    np.save(
+        os.path.join(data_dir, "features.npy"),
+        new_features,
+    )
+
+    np.save(
+        os.path.join(data_dir, "targets.npy"),
+        new_targets,
+    )
+
+    with open(os.path.join(data_dir, "metadata.pkl"), "wb") as f:
+        pickle.dump(new_metadata, f)
+
+    return new_features, new_targets, new_metadata
+
+
+if __name__ == "__main__":
 
     # concatenate3d_anim_euler()
 
-    features, targets, metadata = check_data()
-
-    print(len(features), len(targets), len(metadata))
-
-    # sample a ramdom data
-    i = random.randint(0, len(features))
-
-    print(metadata[i], np.array(features[i]).shape, np.array(targets[i]).shape)
+    trunk_data()
