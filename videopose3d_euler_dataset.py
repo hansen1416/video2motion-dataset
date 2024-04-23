@@ -104,5 +104,45 @@ def concatenate3d_anim_euler():
         pickle.dump(metadata, f)
 
 
+def check_data():
+    with open(
+        os.path.join(
+            BASE_DIR, "video2motion", "videopose3d_euler_dataset", "features.pkl"
+        ),
+        "rb",
+    ) as f:
+        features = pickle.load(f)
+
+    with open(
+        os.path.join(
+            BASE_DIR, "video2motion", "videopose3d_euler_dataset", "targets.pkl"
+        ),
+        "rb",
+    ) as f:
+        targets = pickle.load(f)
+    #
+    with open(
+        os.path.join(
+            BASE_DIR, "video2motion", "videopose3d_euler_dataset", "metadata.pkl"
+        ),
+        "rb",
+    ) as f:
+        metadata = pickle.load(f)
+
+    return features, targets, metadata
+
+
 if __name__ == "__main__":
-    concatenate3d_anim_euler()
+
+    import random
+
+    # concatenate3d_anim_euler()
+
+    features, targets, metadata = check_data()
+
+    print(len(features), len(targets), len(metadata))
+
+    # sample a ramdom data
+    i = random.randint(0, len(features))
+
+    print(metadata[i], np.array(features[i]).shape, np.array(targets[i]).shape)
