@@ -173,29 +173,24 @@ def trunk_data(max_frame=30):
             if j + max_frame < total_frame:
                 feat = features[i][j : j + max_frame]
                 targ = targets[i][j : j + max_frame]
+                meta = {
+                    "name": metadata[i]["name"],
+                    "total_frame": max_frame,
+                    "start_frame": j,
+                    "end_frame": j + max_frame,
+                }
 
-                new_metadata.append(
-                    {
-                        "name": metadata[i]["name"],
-                        "total_frame": max_frame,
-                        "start_frame": j,
-                        "end_frame": j + max_frame,
-                    }
-                )
             else:
                 # if the remaining frames are less than max_frame
                 # take the last `max_frame` frames
                 feat = features[i][total_frame - max_frame :]
                 targ = targets[i][total_frame - max_frame :]
-
-                new_metadata.append(
-                    {
-                        "name": metadata[i]["name"],
-                        "total_frame": max_frame,
-                        "start_frame": total_frame - max_frame,
-                        "end_frame": total_frame,
-                    }
-                )
+                meta = {
+                    "name": metadata[i]["name"],
+                    "total_frame": max_frame,
+                    "start_frame": total_frame - max_frame,
+                    "end_frame": total_frame,
+                }
 
             feat = np.array(feat)
             targ = np.array(targ)
@@ -219,6 +214,7 @@ def trunk_data(max_frame=30):
 
             new_features.append(feat)
             new_targets.append(targ)
+            new_metadata.append(meta)
 
         # break
 
