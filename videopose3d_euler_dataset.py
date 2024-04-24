@@ -18,7 +18,22 @@ def anim_euler_frame_wise(anim_euler_json_data):
     """
     data = []
 
-    for _, v in anim_euler_json_data.items():
+    # for _, v in anim_euler_json_data.items():
+    for bone in [
+        "Hips",
+        "Spine2",
+        "LeftShoulder",
+        "LeftArm",
+        "LeftForeArm",
+        "RightShoulder",
+        "RightArm",
+        "RightForeArm",
+        "LeftUpLeg",
+        "LeftLeg",
+        "RightUpLeg",
+        "RightLeg",
+    ]:
+        v = anim_euler_json_data[bone]
         data.append(np.array(v))
     # `data` is bone wise data, shape (num_bones, num_frames, 3)
     data = np.array(data)
@@ -29,10 +44,14 @@ def anim_euler_frame_wise(anim_euler_json_data):
 
 
 def concatenate3d_anim_euler():
+    """
+    `videopose3d_euler_dataset` contains the 3D pose data from videopose3d and euler angles from `anim-euler-uniform`
+    `anim-euler-uniform` is the true animation data from mixamo, and tracks length is equal for each bone.
+    """
 
     videopose3d_results_dir = os.path.join(BASE_DIR, "video2motion", "results3d")
 
-    anim_eulers_dir = os.path.join(BASE_DIR, "video2motion", "anim-calculated-euler")
+    anim_eulers_dir = os.path.join(BASE_DIR, "video2motion", "anim-euler-uniform")
 
     # videopose3d_results = glob.iglob(os.path.join(videopose3d_results_dir, "*.npy"))
 
@@ -49,7 +68,7 @@ def concatenate3d_anim_euler():
         anim_name = os.path.basename(f).split(".")[0]
 
         videopose3d_result_path = os.path.join(
-            videopose3d_results_dir, f"{anim_name}.avi.npy"
+            videopose3d_results_dir, f"{anim_name}-30-0.avi.npy"
         )
 
         if not os.path.exists(videopose3d_result_path):
@@ -62,9 +81,7 @@ def concatenate3d_anim_euler():
 
             targets.append(data.tolist())
 
-        videopose3d_result = np.load(
-            os.path.join(videopose3d_results_dir, f"{anim_name}.avi.npy")
-        )
+        videopose3d_result = np.load(videopose3d_result_path)
 
         features.append(videopose3d_result.tolist())
 
@@ -133,6 +150,10 @@ def load_full_data():
 
 
 def trunk_data(max_frame=30):
+    """
+    get the results from `videopose3d_euler_dataset` and trunk the data to `max_frame` frames
+
+    """
 
     features, targets, metadata = load_full_data()
 
@@ -140,14 +161,19 @@ def trunk_data(max_frame=30):
     new_targets = []
     new_metadata = []
 
-    for i in range(len(features)):
+    for i in tqdm(range(len(features))):
 
         total_frame = metadata[i]["total_frame"]
 
+        if total_frame < max_frame:
+            print(f"skipping {metadata[i]['name']}, total_frame < max_frame")
+            continue
+
         for j in range(0, total_frame, max_frame):
             if j + max_frame < total_frame:
-                new_features.append(features[i][j : j + max_frame])
-                new_targets.append(targets[i][j : j + max_frame])
+                feat = features[i][j : j + max_frame]
+                targ = targets[i][j : j + max_frame]
+
                 new_metadata.append(
                     {
                         "name": metadata[i]["name"],
@@ -159,8 +185,9 @@ def trunk_data(max_frame=30):
             else:
                 # if the remaining frames are less than max_frame
                 # take the last `max_frame` frames
-                new_features.append(features[i][total_frame - max_frame :])
-                new_targets.append(targets[i][total_frame - max_frame :])
+                feat = features[i][total_frame - max_frame :]
+                targ = targets[i][total_frame - max_frame :]
+
                 new_metadata.append(
                     {
                         "name": metadata[i]["name"],
@@ -169,6 +196,33 @@ def trunk_data(max_frame=30):
                         "end_frame": total_frame,
                     }
                 )
+
+            feat = np.array(feat)
+            targ = np.array(targ)
+
+            try:
+
+                assert feat.shape == (
+                    max_frame,
+                    17,
+                    3,
+                ), f"feat shape not correct {feat.shape}, {metadata[i]['name']}"
+                assert targ.shape == (
+                    max_frame,
+                    12,
+                    3,
+                ), f"targ shape not correct {targ.shape}, {metadata[i]['name']}"
+
+            except AssertionError as e:
+                print(e)
+                continue
+
+            new_features.append(feat)
+            new_targets.append(targ)
+
+        # break
+
+    # print(new_features)
 
     new_features = np.array(new_features, dtype=np.float32)
     new_targets = np.array(new_targets, dtype=np.float32)
@@ -203,5 +257,14 @@ def trunk_data(max_frame=30):
 if __name__ == "__main__":
 
     # concatenate3d_anim_euler()
+
+    # features, targets, metadata = load_full_data()
+
+    # print(len(features), len(targets), len(metadata))
+
+    # for i in range(10):
+    #     print(len(features[i]), type(features[i]))
+    #     print(len(targets[i]), type(targets[i]))
+    #     print(metadata[i])
 
     trunk_data()
