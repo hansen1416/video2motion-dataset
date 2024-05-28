@@ -124,6 +124,120 @@ class MediapieVideoEvaludation:
             if counter > limit:
                 break
 
+    def anim_data_loader(self, json_data, start_frame=0, end_frame=30):
+        """
+        bones in anim-euler-json:
+
+        ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
+        'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+        'RightHandThumb1', 'RightHandThumb2', 'RightHandThumb3', 'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
+        'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3', 'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
+        'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3',
+        'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+        'LeftHandThumb1', 'LeftHandThumb2', 'LeftHandThumb3', 'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandIndex3',
+        'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3', 'LeftHandRing1', 'LeftHandRing2', 'LeftHandRing3',
+        'LeftHandPinky1', 'LeftHandPinky2', 'LeftHandPinky3',
+        'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase',
+        'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase']
+
+        joints in mediapipe results:
+
+        0 - nose
+        1 - left eye (inner)
+        2 - left eye
+        3 - left eye (outer)
+        4 - right eye (inner)
+        5 - right eye
+        6 - right eye (outer)
+        7 - left ear
+        8 - right ear
+        9 - mouth (left)
+        10 - mouth (right)
+        11 - left shoulder
+        12 - right shoulder
+        13 - left elbow
+        14 - right elbow
+        15 - left wrist
+        16 - right wrist
+        17 - left pinky
+        18 - right pinky
+        19 - left index
+        20 - right index
+        21 - left thumb
+        22 - right thumb
+        23 - left hip
+        24 - right hip
+        25 - left knee
+        26 - right knee
+        27 - left ankle
+        28 - right ankle
+        29 - left heel
+        30 - right heel
+        31 - left foot index
+        32 - right foot index
+
+        bones to use as prediction target:
+
+        ['Hips',
+        'RightUpLeg', 'RightLeg',
+        'LeftUpLeg', 'LeftLeg',
+        'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
+        'RightShoulder', 'RightArm', 'RightForeArm',
+        'LeftShoulder', 'LeftArm', 'LeftForeArm',]
+        """
+
+        bones_to_use = [
+            "Hips",
+            "RightUpLeg",
+            "RightLeg",
+            "LeftUpLeg",
+            "LeftLeg",
+            "Spine",
+            "Spine1",
+            "Spine2",
+            "Neck",
+            "Head",
+            "RightShoulder",
+            "RightArm",
+            "RightForeArm",
+            "LeftShoulder",
+            "LeftArm",
+            "LeftForeArm",
+        ]
+
+        data_bones = []
+
+        for bone in bones_to_use:
+
+            values = np.array(json_data[bone])
+
+            # we must consider the time, because the time step is not always 0.166666 ms
+
+            # print(
+            #     "values.shape",
+            #     values.shape,
+            #     start_frame,
+            #     end_frame,
+            #     values[start_frame:end_frame, :].shape,
+            # )
+
+            if start_frame == end_frame:
+                data_bones.append(values[start_frame, :])
+            else:
+                data_bones.append(values[start_frame:end_frame, :])
+
+        # now the bones shape is (num_bones, frame_len, 3)
+        data_bones = np.array(data_bones)
+
+        # print(data_bones.shape)
+
+        # convert it to frame wise data, shape (frame_len, num_bones, 3)
+        data_bones_frame = np.transpose(data_bones, (1, 0, 2))
+
+        # print(data_bones_frame.shape)
+
+        return data_bones_frame
+
     def evaluate_video(self):
 
         counter = 0
@@ -195,7 +309,14 @@ class MediapieVideoEvaludation:
                         mp_image, frame_timestamp_ms
                     )
 
-                    print(pose_landmarker_result)
+                    pose_landmarks = np.array(
+                        [
+                            [landmark.x, landmark.y, landmark.z, landmark.visibility]
+                            for landmark in pose_landmarker_result.pose_landmarks[0]
+                        ]
+                    )
+
+                    print(pose_landmarks.shape)
 
                     frame_timestamp_ms += int(1000 / 60)
 
