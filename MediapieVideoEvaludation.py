@@ -332,7 +332,15 @@ class MediapipeVideoEulerData(Process):
             animation_frames = self._read_animation_frames(object_key)
 
             animation_name = object_key.split("/")[-1].split(".")[0]
-            video_frames = self._read_video_frames(f"videos/{animation_name}-30-0.avi")
+
+            try:
+
+                video_frames = self._read_video_frames(
+                    f"videos/{animation_name}-30-0.avi"
+                )
+            except oss2.exceptions.NoSuchKey:
+                print(f"SKIPPING:: Key {object_key} video does not exist.")
+                continue
 
             assert len(video_frames) == len(
                 animation_frames
@@ -340,11 +348,13 @@ class MediapipeVideoEulerData(Process):
 
             if len(video_frames) < self.num_frames:
                 print(
-                    f"Animation {animation_name} has less than {self.num_frames} frames, skipping"
+                    f"SKIPPING:: Animation {animation_name} has less than {self.num_frames} frames."
                 )
                 continue
 
-            print(f"Read animation {animation_name}, total frames: {len(video_frames)}")
+            print(
+                f"INFO:: Read animation {animation_name}, total frames: {len(video_frames)}"
+            )
 
             joints_position = self._evaluate_video(video_frames)
 
@@ -386,11 +396,13 @@ class MediapipeVideoEulerData(Process):
         self.bucket.put_object(targets_object_name, targets.tobytes())
 
         print(
-            f"Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
+            f"INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
         )
 
 
 if __name__ == "__main__":
+
+    import time
 
     # 创建Server对象。
     # 从环境变量中获取访问凭证。运行本代码示例之前，请确保已设置环境变量OSS_ACCESS_KEY_ID和OSS_ACCESS_KEY_SECRET。
@@ -412,14 +424,41 @@ if __name__ == "__main__":
     # get how many cpu cores available
     num_cores = os.cpu_count()
 
-    print(f"Total {num_cores} CPU cores")
+    num_cores = 8 if num_cores > 8 else num_cores
 
-    # oks = [
-    #     "anim-euler-uniform/Aiming.json",
-    #     "anim-euler-uniform/Angry.json",
-    # ]
+    print(f"Using {num_cores} cores")
 
-    # mediapipe_video_evaludation = MediapipeVideoEulerData()
-    # # mediapie_video_evaludation.check_frames(limit=100)
+    # split the object_keys into num_cores parts, as evenly as possible
+    object_keys_split = np.array_split(object_keys, num_cores)
 
-    # mediapipe_video_evaludation.build_data(oks)
+    processes = [
+        MediapipeVideoEulerData(
+            bucket=bucket,
+            process_number=i,
+            anim_euler_object_keys=object_keys,
+            num_frames=30,
+        )
+        for i, object_keys in enumerate(object_keys_split)
+    ]
+
+    start_time = time.time()
+
+    # run the process,
+    for process in processes:
+        process.start()
+
+    for process in processes:
+        # report the daemon attribute
+        print(
+            process.daemon,
+            process.name,
+            process.pid,
+            process.exitcode,
+            process.is_alive(),
+        )
+
+        process.join()
+
+    end_time = time.time()
+
+    print(f"Time taken: {end_time - start_time}")
