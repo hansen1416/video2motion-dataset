@@ -276,7 +276,7 @@ class MediapipeVideoEulerData(Process):
 
         return np.array(video_frames)
 
-    def _evaluate_video(self, video_frames: np.ndarray) -> np.ndarray:
+    def _evaluate_video(self, video_frames: np.ndarray) -> np.ndarray | None:
         """
         mediapipe pose landmarking on the video frames
 
@@ -302,8 +302,15 @@ class MediapipeVideoEulerData(Process):
                     mp_image, frame_timestamp_ms
                 )
 
-                joints_position.append(
-                    np.array(
+                if (
+                    pose_landmarker_result.pose_landmarks is None
+                    or len(pose_landmarker_result.pose_landmarks) == 0
+                ):
+                    pose_landmarks = np.zeros((33, 4))
+
+                    print(f"WARNING:: No pose landmarks detected in frame {i}")
+                else:
+                    pose_landmarks = np.array(
                         [
                             [
                                 landmark.x,
@@ -314,7 +321,8 @@ class MediapipeVideoEulerData(Process):
                             for landmark in pose_landmarker_result.pose_landmarks[0]
                         ]
                     )
-                )
+
+                joints_position.append(pose_landmarks)
 
                 frame_timestamp_ms += int(1000 / 60)
 
