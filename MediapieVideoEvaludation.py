@@ -1,16 +1,14 @@
 import os
-import sys
 import shutil
 import random
 import string
 import json
+from typing import List
 
 import cv2
 import oss2
 from oss2.credentials import EnvironmentVariableCredentialsProvider
 import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 from dotenv import load_dotenv
 import numpy as np
 
@@ -62,7 +60,7 @@ class OSSObjectTmpReader:
         os.remove(self.tmp_video_path)
 
 
-class MediapieVideoEulerData:
+class MediapipeVideoEulerData:
 
     def __init__(self) -> None:
         # 创建Server对象。
@@ -125,7 +123,7 @@ class MediapieVideoEulerData:
                 break
 
     @staticmethod
-    def _anim_data2frame_wise(json_data):
+    def _anim_data2frame_wise(json_data) -> np.ndarray:
         """
         bones in anim-euler-json:
 
@@ -226,7 +224,16 @@ class MediapieVideoEulerData:
 
         return data_bones
 
-    def _read_animation_frames(self, animation_object):
+    def _read_animation_frames(self, animation_object) -> np.ndarray:
+        """
+        read the animation frames from the json file
+
+        Args:
+            animation_object (str): the object name in the oss bucket
+
+        Returns:
+            np.ndarray: the animation frames, shape (frame_len, num_bones, 3)
+        """
 
         with OSSObjectTmpReader(animation_object, self.bucket) as tmp_file:
             with open(tmp_file, "r") as f:
@@ -234,7 +241,16 @@ class MediapieVideoEulerData:
 
         return self._anim_data2frame_wise(json_data)
 
-    def _read_video_frames(self, video_filename):
+    def _read_video_frames(self, video_filename) -> np.ndarray:
+        """
+        read the video frames from the video file using opencv
+
+        Args:
+            video_filename (str): the video filename in the oss bucket
+
+        Returns:
+            np.ndarray: the video frames, shape (frame_len, height, width, 3)
+        """
 
         video_frames = []
 
@@ -259,7 +275,16 @@ class MediapieVideoEulerData:
 
         return np.array(video_frames)
 
-    def _evaluate_video(self, video_frames: np.ndarray):
+    def _evaluate_video(self, video_frames: np.ndarray) -> np.ndarray:
+        """
+        mediapipe pose landmarking on the video frames
+
+        Args:
+            video_frames (np.ndarray): the video frames, shape (frame_len, height, width, 3)
+
+        Returns:
+            np.ndarray: the joints position, shape (frame_len, num_joints, 4)
+        """
 
         joints_position = []
 
@@ -294,38 +319,84 @@ class MediapieVideoEulerData:
 
         return np.array(joints_position)
 
-    def build_data(self):
+    def build_data(self, anim_euler_object_keys: List, num_frames=30, process_number=0):
 
-        counter = 0
+        # counter = 0
 
-        for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
+        features = []
+        targets = []
 
-            animation_frames = self._read_animation_frames(obj.key)
+        for object_key in anim_euler_object_keys:
 
-            animation_name = obj.key.split("/")[-1].split(".")[0]
+            animation_frames = self._read_animation_frames(object_key)
+
+            animation_name = object_key.split("/")[-1].split(".")[0]
             video_frames = self._read_video_frames(f"videos/{animation_name}-30-0.avi")
 
             assert len(video_frames) == len(
                 animation_frames
             ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
 
+            if len(video_frames) < num_frames:
+                print(
+                    f"Animation {animation_name} has less than {num_frames} frames, skipping"
+                )
+                continue
+
             print(f"Read animation {animation_name}, total frames: {len(video_frames)}")
 
             joints_position = self._evaluate_video(video_frames)
 
-            print(joints_position.shape, animation_frames.shape)
+            # print(joints_position.shape, animation_frames.shape)
 
-            counter += 1
+            # take every 30 frames, for the last 30 frames, take the last 30 frames
+            for i in range(0, len(joints_position), num_frames):
 
-            if counter > 0:
-                break
+                end_frame = i + num_frames
+
+                if end_frame > len(joints_position):
+                    start_frame = len(joints_position) - num_frames
+                    end_frame = len(joints_position)
+                else:
+                    start_frame = end_frame - num_frames
+
+                features.append(joints_position[start_frame:end_frame])
+                targets.append(animation_frames[start_frame:end_frame])
+
+            # counter += 1
+
+            # if counter > 0:
+            #     break
+
+        features = np.array(features)
+        targets = np.array(targets)
+
+        # print(features.shape, targets.shape)
+
+        # put object to oss, under path "mediapipe-video-euler-data/"
+        features_object_name = (
+            f"mediapipe-video-euler-data/features-{process_number}.npy"
+        )
+        targets_object_name = f"mediapipe-video-euler-data/targets-{process_number}.npy"
+
+        self.bucket.put_object(features_object_name, features.tobytes())
+        self.bucket.put_object(targets_object_name, targets.tobytes())
+
+        print(
+            f"Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
+        )
 
 
 if __name__ == "__main__":
 
-    video_filename = "Aiming"
+    # for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
 
-    mediapie_video_evaludation = MediapieVideoEulerData()
+    oks = [
+        "anim-euler-uniform/Aiming.json",
+        "anim-euler-uniform/Angry.json",
+    ]
+
+    mediapipe_video_evaludation = MediapipeVideoEulerData()
     # mediapie_video_evaludation.check_frames(limit=100)
 
-    mediapie_video_evaludation.build_data()
+    mediapipe_video_evaludation.build_data(oks)
