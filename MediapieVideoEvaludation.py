@@ -62,7 +62,7 @@ class OSSObjectTmpReader:
         os.remove(self.tmp_video_path)
 
 
-class MediapieVideoEvaludation:
+class MediapieVideoEulerData:
 
     def __init__(self) -> None:
         # 创建Server对象。
@@ -124,7 +124,8 @@ class MediapieVideoEvaludation:
             if counter > limit:
                 break
 
-    def anim_data_loader(self, json_data, start_frame=0, end_frame=30):
+    @staticmethod
+    def _anim_data2frame_wise(json_data):
         """
         bones in anim-euler-json:
 
@@ -211,20 +212,7 @@ class MediapieVideoEvaludation:
 
             values = np.array(json_data[bone])
 
-            # we must consider the time, because the time step is not always 0.166666 ms
-
-            # print(
-            #     "values.shape",
-            #     values.shape,
-            #     start_frame,
-            #     end_frame,
-            #     values[start_frame:end_frame, :].shape,
-            # )
-
-            if start_frame == end_frame:
-                data_bones.append(values[start_frame, :])
-            else:
-                data_bones.append(values[start_frame:end_frame, :])
+            data_bones.append(values)
 
         # now the bones shape is (num_bones, frame_len, 3)
         data_bones = np.array(data_bones)
@@ -232,95 +220,100 @@ class MediapieVideoEvaludation:
         # print(data_bones.shape)
 
         # convert it to frame wise data, shape (frame_len, num_bones, 3)
-        data_bones_frame = np.transpose(data_bones, (1, 0, 2))
+        data_bones = np.transpose(data_bones, (1, 0, 2))
 
-        # print(data_bones_frame.shape)
+        # print(data_bones.shape)
 
-        return data_bones_frame
+        return data_bones
 
-    def evaluate_video(self):
+    def _read_animation_frames(self, animation_object):
+
+        with OSSObjectTmpReader(animation_object, self.bucket) as tmp_file:
+            with open(tmp_file, "r") as f:
+                json_data = json.load(f)
+
+        return self._anim_data2frame_wise(json_data)
+
+    def _read_video_frames(self, video_filename):
+
+        video_frames = []
+
+        with OSSObjectTmpReader(video_filename, self.bucket) as tmp_video_file:
+
+            # Use OpenCV’s VideoCapture to load the input video.
+            video_capture = cv2.VideoCapture(tmp_video_file)
+
+            while video_capture.isOpened():
+
+                ret, frame = video_capture.read()
+
+                if not ret:
+                    break
+
+                video_frames.append(frame)
+
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+
+            video_capture.release()
+
+        return np.array(video_frames)
+
+    def _evaluate_video(self, video_frames: np.ndarray):
+
+        joints_position = []
+
+        with self.PoseLandmarker.create_from_options(self.options) as landmarker:
+
+            frame_timestamp_ms = 0
+
+            for i in range(video_frames.shape[0]):
+                mp_image = mp.Image(
+                    image_format=mp.ImageFormat.SRGB, data=video_frames[i]
+                )
+
+                pose_landmarker_result = landmarker.detect_for_video(
+                    mp_image, frame_timestamp_ms
+                )
+
+                joints_position.append(
+                    np.array(
+                        [
+                            [
+                                landmark.x,
+                                landmark.y,
+                                landmark.z,
+                                landmark.visibility,
+                            ]
+                            for landmark in pose_landmarker_result.pose_landmarks[0]
+                        ]
+                    )
+                )
+
+                frame_timestamp_ms += int(1000 / 60)
+
+        return np.array(joints_position)
+
+    def build_data(self):
 
         counter = 0
 
         for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
+
+            animation_frames = self._read_animation_frames(obj.key)
+
             animation_name = obj.key.split("/")[-1].split(".")[0]
+            video_frames = self._read_video_frames(f"videos/{animation_name}-30-0.avi")
 
-            with OSSObjectTmpReader(obj.key, self.bucket) as tmp_file:
-                with open(tmp_file, "r") as f:
-                    json_data = json.load(f)
+            assert len(video_frames) == len(
+                animation_frames
+            ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
 
-                    frame_lenth = len(json_data["Hips"])
+            print(f"Read animation {animation_name}, total frames: {len(video_frames)}")
 
-                    print(
-                        f"Read animation {animation_name}, frame length: {frame_lenth}"
-                    )
+            joints_position = self._evaluate_video(video_frames)
 
-            video_frames = []
-
-            with OSSObjectTmpReader(
-                f"videos/{animation_name}-30-0.avi", self.bucket
-            ) as tmp_video_file:
-
-                # Use OpenCV’s VideoCapture to load the input video.
-                video_capture = cv2.VideoCapture(tmp_video_file)
-
-                num_frames = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
-
-                print(f"Read video {animation_name}, total frames: {num_frames}")
-
-                while video_capture.isOpened():
-
-                    ret, frame = video_capture.read()
-
-                    if not ret:
-                        break
-
-                    video_frames.append(frame)
-
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        break
-
-                video_capture.release()
-
-            assert (
-                frame_lenth == num_frames
-            ), f"Frame length does not match the video length. {frame_lenth} != {num_frames}, {animation_name}"
-
-            assert (
-                len(video_frames) == frame_lenth
-            ), f"Frame data does not match the video length. {len(video_frames)} != {frame_lenth}, {animation_name}"
-
-            video_frames = np.array(video_frames)
-
-            # print(video_frames.shape)
-
-            # print(json_data["Hips"])
-
-            with self.PoseLandmarker.create_from_options(self.options) as landmarker:
-
-                frame_timestamp_ms = 0
-
-                for i in range(video_frames.shape[0]):
-                    mp_image = mp.Image(
-                        image_format=mp.ImageFormat.SRGB, data=video_frames[i]
-                    )
-
-                    pose_landmarker_result = landmarker.detect_for_video(
-                        mp_image, frame_timestamp_ms
-                    )
-
-                    pose_landmarks = np.array(
-                        [
-                            [landmark.x, landmark.y, landmark.z, landmark.visibility]
-                            for landmark in pose_landmarker_result.pose_landmarks[0]
-                        ]
-                    )
-
-                    print(pose_landmarks.shape)
-
-                    frame_timestamp_ms += int(1000 / 60)
-
-                    break
+            print(joints_position.shape, animation_frames.shape)
 
             counter += 1
 
@@ -332,7 +325,7 @@ if __name__ == "__main__":
 
     video_filename = "Aiming"
 
-    mediapie_video_evaludation = MediapieVideoEvaludation()
+    mediapie_video_evaludation = MediapieVideoEulerData()
     # mediapie_video_evaludation.check_frames(limit=100)
 
-    mediapie_video_evaludation.evaluate_video()
+    mediapie_video_evaludation.build_data()
