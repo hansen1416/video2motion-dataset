@@ -4,6 +4,7 @@ import random
 import string
 import json
 from typing import List
+from multiprocessing import Process
 
 import cv2
 import oss2
@@ -60,18 +61,18 @@ class OSSObjectTmpReader:
         os.remove(self.tmp_video_path)
 
 
-class MediapipeVideoEulerData:
+class MediapipeVideoEulerData(Process):
 
-    def __init__(self) -> None:
-        # 创建Server对象。
-        # 从环境变量中获取访问凭证。运行本代码示例之前，请确保已设置环境变量OSS_ACCESS_KEY_ID和OSS_ACCESS_KEY_SECRET。
-        auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
-        # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
-        # 填写Bucket名称。
-        endpoint = "oss-ap-southeast-1.aliyuncs.com"
+    def __init__(
+        self, bucket, process_number, anim_euler_object_keys: List, num_frames=30
+    ) -> None:
 
-        # 填写Bucket名称，并设置连接超时时间为30秒。
-        self.bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
+        Process.__init__(self)
+
+        self.bucket = bucket
+        self.process_number = process_number
+        self.anim_euler_object_keys = anim_euler_object_keys
+        self.num_frames = num_frames
 
         model_path = os.path.join("models", "mediapipe", "pose_landmarker_lite.task")
 
@@ -319,14 +320,14 @@ class MediapipeVideoEulerData:
 
         return np.array(joints_position)
 
-    def build_data(self, anim_euler_object_keys: List, num_frames=30, process_number=0):
+    def run(self):
 
         # counter = 0
 
         features = []
         targets = []
 
-        for object_key in anim_euler_object_keys:
+        for object_key in self.anim_euler_object_keys:
 
             animation_frames = self._read_animation_frames(object_key)
 
@@ -337,9 +338,9 @@ class MediapipeVideoEulerData:
                 animation_frames
             ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
 
-            if len(video_frames) < num_frames:
+            if len(video_frames) < self.num_frames:
                 print(
-                    f"Animation {animation_name} has less than {num_frames} frames, skipping"
+                    f"Animation {animation_name} has less than {self.num_frames} frames, skipping"
                 )
                 continue
 
@@ -350,15 +351,15 @@ class MediapipeVideoEulerData:
             # print(joints_position.shape, animation_frames.shape)
 
             # take every 30 frames, for the last 30 frames, take the last 30 frames
-            for i in range(0, len(joints_position), num_frames):
+            for i in range(0, len(joints_position), self.num_frames):
 
-                end_frame = i + num_frames
+                end_frame = i + self.num_frames
 
                 if end_frame > len(joints_position):
-                    start_frame = len(joints_position) - num_frames
+                    start_frame = len(joints_position) - self.num_frames
                     end_frame = len(joints_position)
                 else:
-                    start_frame = end_frame - num_frames
+                    start_frame = end_frame - self.num_frames
 
                 features.append(joints_position[start_frame:end_frame])
                 targets.append(animation_frames[start_frame:end_frame])
@@ -375,9 +376,11 @@ class MediapipeVideoEulerData:
 
         # put object to oss, under path "mediapipe-video-euler-data/"
         features_object_name = (
-            f"mediapipe-video-euler-data/features-{process_number}.npy"
+            f"mediapipe-video-euler-data/features-{self.process_number}.npy"
         )
-        targets_object_name = f"mediapipe-video-euler-data/targets-{process_number}.npy"
+        targets_object_name = (
+            f"mediapipe-video-euler-data/targets-{self.process_number}.npy"
+        )
 
         self.bucket.put_object(features_object_name, features.tobytes())
         self.bucket.put_object(targets_object_name, targets.tobytes())
@@ -389,14 +392,29 @@ class MediapipeVideoEulerData:
 
 if __name__ == "__main__":
 
-    # for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
+    # 创建Server对象。
+    # 从环境变量中获取访问凭证。运行本代码示例之前，请确保已设置环境变量OSS_ACCESS_KEY_ID和OSS_ACCESS_KEY_SECRET。
+    auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
+    # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
+    # 填写Bucket名称。
+    endpoint = "oss-ap-southeast-1.aliyuncs.com"
 
-    oks = [
-        "anim-euler-uniform/Aiming.json",
-        "anim-euler-uniform/Angry.json",
-    ]
+    # 填写Bucket名称，并设置连接超时时间为30秒。
+    bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
 
-    mediapipe_video_evaludation = MediapipeVideoEulerData()
-    # mediapie_video_evaludation.check_frames(limit=100)
+    object_keys = []
 
-    mediapipe_video_evaludation.build_data(oks)
+    for obj in oss2.ObjectIterator(bucket, prefix="anim-euler-uniform/"):
+        object_keys.append(obj.key)
+
+    print(f"Total {len(object_keys)} animation files")
+
+    # oks = [
+    #     "anim-euler-uniform/Aiming.json",
+    #     "anim-euler-uniform/Angry.json",
+    # ]
+
+    # mediapipe_video_evaludation = MediapipeVideoEulerData()
+    # # mediapie_video_evaludation.check_frames(limit=100)
+
+    # mediapipe_video_evaludation.build_data(oks)
