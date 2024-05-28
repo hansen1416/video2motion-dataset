@@ -409,6 +409,11 @@ if __name__ == "__main__":
 
     print(f"Total {len(object_keys)} animation files")
 
+    # get how many cpu cores available
+    num_cores = os.cpu_count()
+
+    print(f"Total {num_cores} CPU cores")
+
     # oks = [
     #     "anim-euler-uniform/Aiming.json",
     #     "anim-euler-uniform/Angry.json",
