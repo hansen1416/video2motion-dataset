@@ -308,7 +308,9 @@ class MediapipeVideoEulerData(Process):
                 ):
                     pose_landmarks = np.zeros((33, 4))
 
-                    print(f"WARNING:: No pose landmarks detected in frame {i}")
+                    print(
+                        f"{self.process_number} WARNING:: No pose landmarks detected in frame {i}"
+                    )
                 else:
                     pose_landmarks = np.array(
                         [
@@ -347,7 +349,9 @@ class MediapipeVideoEulerData(Process):
                     f"videos/{animation_name}-30-0.avi"
                 )
             except oss2.exceptions.NoSuchKey:
-                print(f"SKIPPING:: Key {object_key} video does not exist.")
+                print(
+                    f"{self.process_number} SKIPPING:: Key {object_key} video does not exist."
+                )
                 continue
 
             assert len(video_frames) == len(
@@ -356,12 +360,12 @@ class MediapipeVideoEulerData(Process):
 
             if len(video_frames) < self.num_frames:
                 print(
-                    f"SKIPPING:: Animation {animation_name} has less than {self.num_frames} frames."
+                    f"{self.process_number} SKIPPING:: Animation {animation_name} has less than {self.num_frames} frames."
                 )
                 continue
 
             print(
-                f"INFO:: Read animation {animation_name}, total frames: {len(video_frames)}"
+                f"{self.process_number} INFO:: Read animation {animation_name}, total frames: {len(video_frames)}"
             )
 
             joints_position = self._evaluate_video(video_frames)
@@ -392,19 +396,23 @@ class MediapipeVideoEulerData(Process):
 
         # print(features.shape, targets.shape)
 
+        # get the first and the last animation name from self.anim_euler_object_keys
+        first_animation_name = (
+            self.anim_euler_object_keys[0].split("/")[-1].split(".")[0]
+        )
+        last_animation_name = (
+            self.anim_euler_object_keys[-1].split("/")[-1].split(".")[0]
+        )
+
         # put object to oss, under path "mediapipe-video-euler-data/"
-        features_object_name = (
-            f"mediapipe-video-euler-data/features-{self.process_number}.npy"
-        )
-        targets_object_name = (
-            f"mediapipe-video-euler-data/targets-{self.process_number}.npy"
-        )
+        features_object_name = f"mediapipe-video-euler-data/features-{first_animation_name}-{last_animation_name}.npy"
+        targets_object_name = f"mediapipe-video-euler-data/targets-{first_animation_name}-{last_animation_name}.npy"
 
         self.bucket.put_object(features_object_name, features.tobytes())
         self.bucket.put_object(targets_object_name, targets.tobytes())
 
         print(
-            f"INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
+            f"{self.process_number} INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
         )
 
 
