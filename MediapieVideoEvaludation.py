@@ -74,6 +74,8 @@ class MediapipeVideoEulerData(Process):
         self.anim_euler_object_keys = anim_euler_object_keys
         self.num_frames = num_frames
 
+        self.path_split = "/" if self.bucket else os.path.sep
+
         model_path = os.path.join("models", "mediapipe", "pose_landmarker_lite.task")
 
         BaseOptions = mp.tasks.BaseOptions
@@ -236,11 +238,17 @@ class MediapipeVideoEulerData(Process):
             np.ndarray: the animation frames, shape (frame_len, num_bones, 3)
         """
 
-        with OSSObjectTmpReader(animation_object, self.bucket) as tmp_file:
-            with open(tmp_file, "r") as f:
+        if self.bucket:
+            with OSSObjectTmpReader(animation_object, self.bucket) as tmp_file:
+                with open(tmp_file, "r") as f:
+                    json_data = json.load(f)
+
+            return self._anim_data2frame_wise(json_data)
+        else:
+            with open(animation_object, "r") as f:
                 json_data = json.load(f)
 
-        return self._anim_data2frame_wise(json_data)
+            return self._anim_data2frame_wise(json_data)
 
     def _read_video_frames(self, video_filename) -> np.ndarray:
         """
@@ -255,10 +263,30 @@ class MediapipeVideoEulerData(Process):
 
         video_frames = []
 
-        with OSSObjectTmpReader(video_filename, self.bucket) as tmp_video_file:
+        if self.bucket:
+            with OSSObjectTmpReader(video_filename, self.bucket) as tmp_video_file:
 
+                # Use OpenCV’s VideoCapture to load the input video.
+                video_capture = cv2.VideoCapture(tmp_video_file)
+
+                while video_capture.isOpened():
+
+                    ret, frame = video_capture.read()
+
+                    if not ret:
+                        break
+
+                    video_frames.append(frame)
+
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
+
+                video_capture.release()
+
+            return np.array(video_frames)
+        else:
             # Use OpenCV’s VideoCapture to load the input video.
-            video_capture = cv2.VideoCapture(tmp_video_file)
+            video_capture = cv2.VideoCapture(video_filename)
 
             while video_capture.isOpened():
 
@@ -274,7 +302,7 @@ class MediapipeVideoEulerData(Process):
 
             video_capture.release()
 
-        return np.array(video_frames)
+            return np.array(video_frames)
 
     def _evaluate_video(self, video_frames: np.ndarray) -> np.ndarray | None:
         """
@@ -341,13 +369,30 @@ class MediapipeVideoEulerData(Process):
 
             animation_frames = self._read_animation_frames(object_key)
 
-            animation_name = object_key.split("/")[-1].split(".")[0]
+            animation_name = object_key.split(self.path_split)[-1].split(".")[0]
 
             try:
 
-                video_frames = self._read_video_frames(
-                    f"videos/{animation_name}-30-0.avi"
-                )
+                if self.bucket:
+                    video_path1 = f"videos/{animation_name}-30-0.avi"
+                else:
+                    video_path1 = os.path.join(
+                        object_key,
+                        "..",
+                        "..",
+                        "videos",
+                        f"{animation_name}-30-0.avi",
+                    )
+
+                    print(animation_name)
+
+                    if not os.path.exists(video_path1):
+                        print(
+                            f"{self.process_number} SKIPPING:: Key {video_path1} video does not exist."
+                        )
+                        continue
+
+                video_frames = self._read_video_frames(video_path1)
             except oss2.exceptions.NoSuchKey:
                 print(
                     f"{self.process_number} SKIPPING:: Key {object_key} video does not exist."
@@ -412,8 +457,9 @@ class MediapipeVideoEulerData(Process):
         np.save(features_object_name, features)
         np.save(targets_object_name, targets)
 
-        self.bucket.put_object(features_object_name, features.tobytes())
-        self.bucket.put_object(targets_object_name, targets.tobytes())
+        if self.bucket:
+            self.bucket.put_object(features_object_name, features.tobytes())
+            self.bucket.put_object(targets_object_name, targets.tobytes())
 
         print(
             f"{self.process_number} INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
@@ -424,36 +470,52 @@ if __name__ == "__main__":
 
     import time
 
-    # 创建Server对象。
-    # 从环境变量中获取访问凭证。运行本代码示例之前，请确保已设置环境变量OSS_ACCESS_KEY_ID和OSS_ACCESS_KEY_SECRET。
-    auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
-    # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
-    # 填写Bucket名称。
-    endpoint = "oss-ap-southeast-1.aliyuncs.com"
-
-    # 填写Bucket名称，并设置连接超时时间为30秒。
-    bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
-
-    object_keys = []
-
-    for obj in oss2.ObjectIterator(bucket, prefix="anim-euler-uniform/"):
-        object_keys.append(obj.key)
-
-    print(f"Total {len(object_keys)} animation files")
-
     # get how many cpu cores available
     num_cores = os.cpu_count()
 
-    num_cores = 8 if num_cores > 8 else num_cores
+    # num_cores = 8 if num_cores > 8 else num_cores
 
     print(f"Using {num_cores} cores")
 
-    # split the object_keys into num_cores parts, as evenly as possible
-    object_keys_split = np.array_split(object_keys, num_cores)
+    if False:
+
+        # 创建Server对象。
+        # 从环境变量中获取访问凭证。运行本代码示例之前，请确保已设置环境变量OSS_ACCESS_KEY_ID和OSS_ACCESS_KEY_SECRET。
+        auth = oss2.ProviderAuth(EnvironmentVariableCredentialsProvider())
+        # yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com。
+        # 填写Bucket名称。
+        endpoint = "oss-ap-southeast-1.aliyuncs.com"
+
+        # 填写Bucket名称，并设置连接超时时间为30秒。
+        bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
+
+        object_keys = []
+
+        for obj in oss2.ObjectIterator(bucket, prefix="anim-euler-uniform/"):
+            object_keys.append(obj.key)
+
+        print(f"Total {len(object_keys)} animation files")
+
+        # split the object_keys into num_cores parts, as evenly as possible
+        object_keys_split = np.array_split(object_keys, num_cores)
+    else:
+
+        anim_euler_dir = os.path.join("d:\\", "video2motion", "anim-euler-uniform")
+
+        object_keys = list(
+            os.listdir(os.path.join("d:\\", "video2motion", "anim-euler-uniform"))
+        )
+
+        object_keys = [os.path.join(anim_euler_dir, obj) for obj in object_keys]
+
+        print(f"Total {len(object_keys)} animation files")
+
+        # split the object_keys into num_cores parts, as evenly as possible
+        object_keys_split = np.array_split(object_keys, num_cores)
 
     processes = [
         MediapipeVideoEulerData(
-            bucket=bucket,
+            bucket=None,
             process_number=i,
             anim_euler_object_keys=object_keys,
             num_frames=30,
