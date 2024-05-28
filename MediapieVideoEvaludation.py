@@ -199,6 +199,8 @@ class MediapieVideoEvaludation:
 
                     frame_timestamp_ms += int(1000 / 60)
 
+                    break
+
             counter += 1
 
             if counter > 0:
