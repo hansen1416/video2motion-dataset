@@ -408,6 +408,10 @@ class MediapipeVideoEulerData(Process):
         features_object_name = f"mediapipe-video-euler-data/features-{first_animation_name}-{last_animation_name}.npy"
         targets_object_name = f"mediapipe-video-euler-data/targets-{first_animation_name}-{last_animation_name}.npy"
 
+        # save files to local
+        np.save(features_object_name, features)
+        np.save(targets_object_name, targets)
+
         self.bucket.put_object(features_object_name, features.tobytes())
         self.bucket.put_object(targets_object_name, targets.tobytes())
 
