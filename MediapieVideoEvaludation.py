@@ -12,6 +12,7 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from dotenv import load_dotenv
+import numpy as np
 
 load_dotenv()
 
@@ -74,6 +75,21 @@ class MediapieVideoEvaludation:
         # 填写Bucket名称，并设置连接超时时间为30秒。
         self.bucket = oss2.Bucket(auth, endpoint, "pose-daten", connect_timeout=30)
 
+        model_path = os.path.join("models", "mediapipe", "pose_landmarker_lite.task")
+
+        BaseOptions = mp.tasks.BaseOptions
+        PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+        VisionRunningMode = mp.tasks.vision.RunningMode
+
+        # Create a pose landmarker instance with the video mode:
+        self.options = PoseLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=model_path),
+            running_mode=VisionRunningMode.VIDEO,
+            num_poses=1,
+        )
+
+        self.PoseLandmarker = mp.tasks.vision.PoseLandmarker
+
     def check_frames(self, limit=10):
 
         counter = 0
@@ -108,46 +124,85 @@ class MediapieVideoEvaludation:
             if counter > limit:
                 break
 
-    def evaluate_video(self, animation_name):
+    def evaluate_video(self):
 
-        object_name = f"videos/{animation_name}-30-0.avi"
+        counter = 0
 
-        # # Loop through each frame in the video using VideoCapture#read()
-        # while video_capture.isOpened():
-        #     num_frames = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
+        for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
+            animation_name = obj.key.split("/")[-1].split(".")[0]
 
-        # # Read the frame using VideoCapture#read()
-        # ret, frame = video_capture.read()
+            with OSSObjectTmpReader(obj.key, self.bucket) as tmp_file:
+                with open(tmp_file, "r") as f:
+                    json_data = json.load(f)
 
-        # # Break the loop if the video has ended
-        # if not ret:
-        #     break
+                    frame_lenth = len(json_data["Hips"])
 
-        # # Convert the frame to RGB using cv2.COLOR_BGR2RGB
-        # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    print(
+                        f"Read animation {animation_name}, frame length: {frame_lenth}"
+                    )
 
-        # # Convert the frame to a MediaPipe’s Image object
-        # mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+            video_frames = []
 
-        # # Process the image using the MediaPipe instance
-        # # results = mediapipe_instance.process(mp_image)
+            with OSSObjectTmpReader(
+                f"videos/{animation_name}-30-0.avi", self.bucket
+            ) as tmp_video_file:
 
-        # # Convert the MediaPipe results to a dictionary
-        # # results_dict = python.solutions.drawing_utils._draw_landmarks(
-        # #     frame, results.pose_landmarks, None, None, None, None
-        # # )
+                # Use OpenCV’s VideoCapture to load the input video.
+                video_capture = cv2.VideoCapture(tmp_video_file)
 
-        # # Draw the results on the frame using cv2.imshow()
-        # # cv2.imshow("MediaPipe Pose", results_dict)
+                num_frames = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        # # Break the loop if the 'q' key is pressed
-        # if cv2.waitKey(1) & 0xFF == ord("q"):
-        #     break
+                print(f"Read video {animation_name}, total frames: {num_frames}")
 
-        # # Convert the frame received from OpenCV to a MediaPipe’s Image object.
-        # mp_image = mp.Image(
-        #     image_format=mp.ImageFormat.SRGB, data=numpy_frame_from_opencv
-        # )
+                while video_capture.isOpened():
+
+                    ret, frame = video_capture.read()
+
+                    if not ret:
+                        break
+
+                    video_frames.append(frame)
+
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
+
+                video_capture.release()
+
+            assert (
+                frame_lenth == num_frames
+            ), f"Frame length does not match the video length. {frame_lenth} != {num_frames}, {animation_name}"
+
+            assert (
+                len(video_frames) == frame_lenth
+            ), f"Frame data does not match the video length. {len(video_frames)} != {frame_lenth}, {animation_name}"
+
+            video_frames = np.array(video_frames)
+
+            # print(video_frames.shape)
+
+            # print(json_data["Hips"])
+
+            with self.PoseLandmarker.create_from_options(self.options) as landmarker:
+
+                frame_timestamp_ms = 0
+
+                for i in range(video_frames.shape[0]):
+                    mp_image = mp.Image(
+                        image_format=mp.ImageFormat.SRGB, data=video_frames[i]
+                    )
+
+                    pose_landmarker_result = landmarker.detect_for_video(
+                        mp_image, frame_timestamp_ms
+                    )
+
+                    print(pose_landmarker_result)
+
+                    frame_timestamp_ms += int(1000 / 60)
+
+            counter += 1
+
+            if counter > 0:
+                break
 
 
 if __name__ == "__main__":
@@ -155,25 +210,6 @@ if __name__ == "__main__":
     video_filename = "Aiming"
 
     mediapie_video_evaludation = MediapieVideoEvaludation()
-    # mediapie_video_evaludation.evaluate_video(video_filename)
+    # mediapie_video_evaludation.check_frames(limit=100)
 
-    mediapie_video_evaludation.check_frames(limit=10000)
-
-exit()
-
-model_path = os.path.join("models", "pose_landmarker_lite.task")
-
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
-
-# Create a pose landmarker instance with the video mode:
-options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.VIDEO,
-    num_poses=1,
-)
-
-with PoseLandmarker.create_from_options(options) as landmarker:
-    pass
+    mediapie_video_evaludation.evaluate_video()
