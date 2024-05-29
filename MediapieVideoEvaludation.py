@@ -97,7 +97,7 @@ class MediapipeVideoEulerData(Process):
 
         # 列举fun文件夹下的所有文件，包括子目录下的文件。
         for obj in oss2.ObjectIterator(self.bucket, prefix="anim-euler-uniform/"):
-            animation_name = obj.key.split("/")[-1].split(".")[0]
+            animation_name = obj.key.split(self.path_split)[-1].split(".")[0]
 
             with OSSObjectTmpReader(obj.key, self.bucket) as tmp_file:
                 with open(tmp_file, "r") as f:
@@ -384,8 +384,6 @@ class MediapipeVideoEulerData(Process):
                         f"{animation_name}-30-0.avi",
                     )
 
-                    print(animation_name)
-
                     if not os.path.exists(video_path1):
                         print(
                             f"{self.process_number} SKIPPING:: Key {video_path1} video does not exist."
@@ -443,23 +441,31 @@ class MediapipeVideoEulerData(Process):
 
         # get the first and the last animation name from self.anim_euler_object_keys
         first_animation_name = (
-            self.anim_euler_object_keys[0].split("/")[-1].split(".")[0]
+            self.anim_euler_object_keys[0].split(self.path_split)[-1].split(".")[0]
         )
         last_animation_name = (
-            self.anim_euler_object_keys[-1].split("/")[-1].split(".")[0]
+            self.anim_euler_object_keys[-1].split(self.path_split)[-1].split(".")[0]
         )
 
         # put object to oss, under path "mediapipe-video-euler-data/"
-        features_object_name = f"mediapipe-video-euler-data/features-{first_animation_name}-{last_animation_name}.npy"
-        targets_object_name = f"mediapipe-video-euler-data/targets-{first_animation_name}-{last_animation_name}.npy"
+        features_object_name = (
+            f"features-{first_animation_name}-{last_animation_name}.npy"
+        )
+        targets_object_name = (
+            f"targets-{first_animation_name}-{last_animation_name}.npy"
+        )
 
         # save files to local
         np.save(features_object_name, features)
         np.save(targets_object_name, targets)
 
         if self.bucket:
-            self.bucket.put_object(features_object_name, features.tobytes())
-            self.bucket.put_object(targets_object_name, targets.tobytes())
+            self.bucket.put_object(
+                f"mediapipe-video-euler-data/{features_object_name}", features.tobytes()
+            )
+            self.bucket.put_object(
+                f"mediapipe-video-euler-data/{targets_object_name}", targets.tobytes()
+            )
 
         print(
             f"{self.process_number} INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
@@ -500,11 +506,12 @@ if __name__ == "__main__":
         object_keys_split = np.array_split(object_keys, num_cores)
     else:
 
-        anim_euler_dir = os.path.join("d:\\", "video2motion", "anim-euler-uniform")
-
-        object_keys = list(
-            os.listdir(os.path.join("d:\\", "video2motion", "anim-euler-uniform"))
+        # anim_euler_dir = os.path.join("d:\\", "video2motion", "anim-euler-uniform")
+        anim_euler_dir = os.path.join(
+            os.path.expanduser("~"), "Documents", "video2motion", "anim-euler-uniform"
         )
+
+        object_keys = list(os.listdir(anim_euler_dir))
 
         object_keys = [os.path.join(anim_euler_dir, obj) for obj in object_keys]
 
