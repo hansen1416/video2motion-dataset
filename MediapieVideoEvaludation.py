@@ -450,12 +450,18 @@ class MediapipeVideoEulerData(Process):
             target_tmp_key = os.path.join("tmp", "targets", f"{animation_name}.npy")
 
             if os.path.exists(feature_tmp_key) and os.path.exists(target_tmp_key):
-                animation_features = np.load(feature_tmp_key)
-                animation_targets = np.load(target_tmp_key)
+                animation_features = np.load(feature_tmp_key, allow_pickle=True)
+                animation_targets = np.load(target_tmp_key, allow_pickle=True)
             else:
                 animation_features, animation_targets = self.build_features_targets(
                     object_key
                 )
+
+            if animation_features is None and animation_targets is None:
+                continue
+
+            if len(animation_features) == 0 or len(animation_targets) == 0:
+                continue
 
             # save tmp features/targets to local
             np.save(feature_tmp_key, animation_features)
