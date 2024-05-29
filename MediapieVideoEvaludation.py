@@ -434,49 +434,90 @@ class MediapipeVideoEulerData(Process):
 
         # counter = 0
 
-        features = []
-        targets = []
+        features = None
+        targets = None
+
+        os.makedirs(os.path.join("tmp", "features"), exist_ok=True)
+        os.makedirs(os.path.join("tmp", "targets"), exist_ok=True)
+        os.makedirs(os.path.join("data", "features"), exist_ok=True)
+        os.makedirs(os.path.join("data", "targets"), exist_ok=True)
 
         for object_key in self.anim_euler_object_keys:
 
-            animation_features, animation_targets = self.build_features_targets(
-                object_key
-            )
+            animation_name = object_key.split(self.path_split)[-1].split(".")[0]
+
+            feature_tmp_key = os.path.join("tmp", "features", f"{animation_name}.npy")
+            target_tmp_key = os.path.join("tmp", "targets", f"{animation_name}.npy")
+
+            if os.path.exists(feature_tmp_key) and os.path.exists(target_tmp_key):
+                animation_features = np.load(feature_tmp_key)
+                animation_targets = np.load(target_tmp_key)
+            else:
+                animation_features, animation_targets = self.build_features_targets(
+                    object_key
+                )
+
+            # save tmp features/targets to local
+            np.save(feature_tmp_key, animation_features)
+            np.save(target_tmp_key, animation_targets)
 
             # counter += 1
 
             # if counter > 1:
             #     break
 
-        # print(animation_features.shape, animation_targets.shape)
+            # print(animation_features.shape, animation_targets.shape)
 
-        features = np.array(animation_features)
-        targets = np.array(animation_targets)
+            if features is None and targets is None:
+                features = np.array(animation_features)
+                targets = np.array(animation_targets)
+            else:
+                # concatenate the features and targets
+                features = np.concatenate((features, animation_features), axis=0)
+                targets = np.concatenate((targets, animation_targets), axis=0)
 
         # print(features.shape, targets.shape)
 
         # put object to oss, under path "mediapipe-video-euler-data/"
-        features_object_name = f"features-{self.process_number}.npy"
-        targets_object_name = f"targets-{self.process_number}.npy"
+        features_key = f"features-{self.process_number}.npy"
+        targets_key = f"targets-{self.process_number}.npy"
 
         # save files to local
-        np.save(os.path.join("data", "features", features_object_name), features)
-        np.save(os.path.join("data", "targets", targets_object_name), targets)
+        np.save(os.path.join("data", "features", features_key), features)
+        np.save(os.path.join("data", "targets", targets_key), targets)
 
         if self.bucket:
             self.bucket.put_object(
-                f"mediapipe-video-euler-data/{features_object_name}", features.tobytes()
+                f"mediapipe-video-euler-data/{features_key}", features.tobytes()
             )
             self.bucket.put_object(
-                f"mediapipe-video-euler-data/{targets_object_name}", targets.tobytes()
+                f"mediapipe-video-euler-data/{targets_key}", targets.tobytes()
             )
 
         print(
-            f"{self.process_number} INFO:: Put features to {features_object_name}, shape: {features.shape}, targets to {targets_object_name}, shape: {targets.shape}"
+            f"{self.process_number} INFO:: Put features to {features_key}, shape: {features.shape}, targets to {targets_key}, shape: {targets.shape}"
         )
 
 
+def merge_data(data_dir):
+
+    files = []
+
+    for file in os.listdir(data_dir):
+        files.append(os.path.join(data_dir, file))
+
+    for f in files:
+        data = np.load(f, allow_pickle=True)
+        print(f, data.shape)
+
+        break
+
+
 if __name__ == "__main__":
+
+    # merge_data(os.path.join("data", "features"))
+
+    # exit()
 
     import time
 
