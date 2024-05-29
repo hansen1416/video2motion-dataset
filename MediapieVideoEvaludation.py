@@ -514,18 +514,29 @@ def merge_data(data_dir):
     for file in os.listdir(data_dir):
         files.append(os.path.join(data_dir, file))
 
+    results = []
+
     for f in files:
         data = np.load(f, allow_pickle=True)
         print(f, data.shape)
 
-        break
+        results.append(data)
+
+    # concatenate all the data along axis=0
+    results = np.concatenate(results, axis=0)
+
+    print(results.shape)
+
+    # save to local
+    np.save(data_dir + ".npy", results)
 
 
 if __name__ == "__main__":
 
-    # merge_data(os.path.join("data", "features"))
+    merge_data(os.path.join("data", "features"))
+    merge_data(os.path.join("data", "targets"))
 
-    # exit()
+    exit()
 
     import time
 
