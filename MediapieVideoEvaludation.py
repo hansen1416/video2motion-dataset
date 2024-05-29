@@ -390,9 +390,11 @@ class MediapipeVideoEulerData(Process):
             )
             return None, None
 
-        assert len(video_frames) == len(
-            animation_frames
-        ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
+        if len(video_frames) != len(animation_frames):
+            print(
+                f"{self.process_number} SKIPPING:: Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
+            )
+            return None, None
 
         if len(video_frames) < self.num_frames:
             print(
@@ -460,7 +462,7 @@ class MediapipeVideoEulerData(Process):
             if animation_features is None and animation_targets is None:
                 continue
 
-            if len(animation_features) == 0 or len(animation_targets) == 0:
+            if len(animation_features.shape) == 0 or len(animation_targets.shape) == 0:
                 continue
 
             # save tmp features/targets to local
