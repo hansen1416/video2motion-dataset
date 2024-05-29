@@ -455,25 +455,13 @@ class MediapipeVideoEulerData(Process):
 
         # print(features.shape, targets.shape)
 
-        # get the first and the last animation name from self.anim_euler_object_keys
-        first_animation_name = (
-            self.anim_euler_object_keys[0].split(self.path_split)[-1].split(".")[0]
-        )
-        last_animation_name = (
-            self.anim_euler_object_keys[-1].split(self.path_split)[-1].split(".")[0]
-        )
-
         # put object to oss, under path "mediapipe-video-euler-data/"
-        features_object_name = (
-            f"features-{first_animation_name}-{last_animation_name}.npy"
-        )
-        targets_object_name = (
-            f"targets-{first_animation_name}-{last_animation_name}.npy"
-        )
+        features_object_name = f"features-{self.process_number}.npy"
+        targets_object_name = f"targets-{self.process_number}.npy"
 
         # save files to local
-        np.save(features_object_name, features)
-        np.save(targets_object_name, targets)
+        np.save(os.path.join("data", "features", features_object_name), features)
+        np.save(os.path.join("data", "targets", targets_object_name), targets)
 
         if self.bucket:
             self.bucket.put_object(
