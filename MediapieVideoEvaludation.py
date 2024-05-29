@@ -358,6 +358,78 @@ class MediapipeVideoEulerData(Process):
 
         return np.array(joints_position)
 
+    def build_features_targets(self, object_key):
+
+        animation_frames = self._read_animation_frames(object_key)
+
+        animation_name = object_key.split(self.path_split)[-1].split(".")[0]
+
+        try:
+
+            if self.bucket:
+                video_path = f"videos/{animation_name}-30-0.avi"
+            else:
+                video_path = os.path.join(
+                    object_key,
+                    "..",
+                    "..",
+                    "videos",
+                    f"{animation_name}-30-0.avi",
+                )
+
+                if not os.path.exists(video_path):
+                    print(
+                        f"{self.process_number} SKIPPING:: Key {video_path} video does not exist."
+                    )
+                    return None, None
+
+            video_frames = self._read_video_frames(video_path)
+        except oss2.exceptions.NoSuchKey:
+            print(
+                f"{self.process_number} SKIPPING:: Key {object_key} video does not exist."
+            )
+            return None, None
+
+        assert len(video_frames) == len(
+            animation_frames
+        ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
+
+        if len(video_frames) < self.num_frames:
+            print(
+                f"{self.process_number} SKIPPING:: Animation {animation_name} has less than {self.num_frames} frames."
+            )
+            return None, None
+
+        print(
+            f"{self.process_number} INFO:: Read animation {animation_name}, total frames: {len(video_frames)}"
+        )
+
+        joints_position = self._evaluate_video(video_frames)
+
+        # print(joints_position.shape, animation_frames.shape)
+
+        # take every 30 frames, for the last 30 frames, take the last 30 frames
+        features = []
+        targets = []
+
+        for i in range(0, len(joints_position), self.num_frames):
+
+            end_frame = i + self.num_frames
+
+            if end_frame > len(joints_position):
+                start_frame = len(joints_position) - self.num_frames
+                end_frame = len(joints_position)
+            else:
+                start_frame = end_frame - self.num_frames
+
+            features.append(joints_position[start_frame:end_frame])
+            targets.append(animation_frames[start_frame:end_frame])
+
+        features = np.array(features)
+        targets = np.array(targets)
+
+        return features, targets
+
     def run(self):
 
         # counter = 0
@@ -367,75 +439,19 @@ class MediapipeVideoEulerData(Process):
 
         for object_key in self.anim_euler_object_keys:
 
-            animation_frames = self._read_animation_frames(object_key)
-
-            animation_name = object_key.split(self.path_split)[-1].split(".")[0]
-
-            try:
-
-                if self.bucket:
-                    video_path1 = f"videos/{animation_name}-30-0.avi"
-                else:
-                    video_path1 = os.path.join(
-                        object_key,
-                        "..",
-                        "..",
-                        "videos",
-                        f"{animation_name}-30-0.avi",
-                    )
-
-                    if not os.path.exists(video_path1):
-                        print(
-                            f"{self.process_number} SKIPPING:: Key {video_path1} video does not exist."
-                        )
-                        continue
-
-                video_frames = self._read_video_frames(video_path1)
-            except oss2.exceptions.NoSuchKey:
-                print(
-                    f"{self.process_number} SKIPPING:: Key {object_key} video does not exist."
-                )
-                continue
-
-            assert len(video_frames) == len(
-                animation_frames
-            ), f"Frame data does not match the video length. {len(video_frames)} != {len(animation_frames)}, {animation_name}"
-
-            if len(video_frames) < self.num_frames:
-                print(
-                    f"{self.process_number} SKIPPING:: Animation {animation_name} has less than {self.num_frames} frames."
-                )
-                continue
-
-            print(
-                f"{self.process_number} INFO:: Read animation {animation_name}, total frames: {len(video_frames)}"
+            animation_features, animation_targets = self.build_features_targets(
+                object_key
             )
-
-            joints_position = self._evaluate_video(video_frames)
-
-            # print(joints_position.shape, animation_frames.shape)
-
-            # take every 30 frames, for the last 30 frames, take the last 30 frames
-            for i in range(0, len(joints_position), self.num_frames):
-
-                end_frame = i + self.num_frames
-
-                if end_frame > len(joints_position):
-                    start_frame = len(joints_position) - self.num_frames
-                    end_frame = len(joints_position)
-                else:
-                    start_frame = end_frame - self.num_frames
-
-                features.append(joints_position[start_frame:end_frame])
-                targets.append(animation_frames[start_frame:end_frame])
 
             # counter += 1
 
-            # if counter > 0:
+            # if counter > 1:
             #     break
 
-        features = np.array(features)
-        targets = np.array(targets)
+        # print(animation_features.shape, animation_targets.shape)
+
+        features = np.array(animation_features)
+        targets = np.array(animation_targets)
 
         # print(features.shape, targets.shape)
 
